@@ -1,0 +1,233 @@
+-- 🌶️ chilli Speed Boost (versão com minimizar, reabrir, velocidade infinita)
+-- Use apenas em experiências próprias ou com permissão do criador.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+if not player then return end
+
+local guiParent = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
+if not guiParent then return end
+
+-- remove GUIs antigas
+for _, v in pairs(guiParent:GetChildren()) do
+	if v.Name == "ChilliSpeedBoostGUI" or v.Name == "ChilliOpenButton" then
+		v:Destroy()
+	end
+end
+
+-- variáveis
+local boosted = false
+local originalSpeed = 16
+local customSpeed = 50
+local humanoid
+local minimized = false
+
+-- GUI principal
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ChilliSpeedBoostGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = guiParent
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 260, 0, 130)
+mainFrame.Position = UDim2.new(0.05, 0, 0.7, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
+
+-- título
+local title = Instance.new("TextLabel")
+title.Text = "🌶️ chilli Speed Boost"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.BackgroundTransparency = 1
+title.Position = UDim2.new(0.05, 0, 0, 5)
+title.Size = UDim2.new(0.9, 0, 0, 25)
+title.Parent = mainFrame
+
+-- minimizar botão
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Text = "-"
+minimizeButton.Font = Enum.Font.SourceSansBold
+minimizeButton.TextSize = 18
+minimizeButton.Size = UDim2.new(0, 25, 0, 25)
+minimizeButton.Position = UDim2.new(1, -60, 0, 5)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(120, 120, 60)
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.Parent = mainFrame
+Instance.new("UICorner", minimizeButton).CornerRadius = UDim.new(0, 6)
+
+-- botão de fechar
+local closeButton = Instance.new("TextButton")
+closeButton.Text = "X"
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.TextSize = 18
+closeButton.Size = UDim2.new(0, 25, 0, 25)
+closeButton.Position = UDim2.new(1, -30, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Parent = mainFrame
+Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 6)
+
+-- caixa de texto
+local speedBox = Instance.new("TextBox")
+speedBox.PlaceholderText = "Velocidade (ex: 80)"
+speedBox.Text = tostring(customSpeed)
+speedBox.Font = Enum.Font.SourceSans
+speedBox.TextSize = 18
+speedBox.Size = UDim2.new(0.9, 0, 0, 30)
+speedBox.Position = UDim2.new(0.05, 0, 0.35, 0)
+speedBox.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedBox.Parent = mainFrame
+Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 6)
+
+-- botão ativar/desativar
+local toggleButton = Instance.new("TextButton")
+toggleButton.Text = "ATIVAR BOOST"
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 18
+toggleButton.Size = UDim2.new(0.9, 0, 0, 30)
+toggleButton.Position = UDim2.new(0.05, 0, 0.65, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Parent = mainFrame
+Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 6)
+
+-- botão de reabrir GUI
+local openButton = Instance.new("ImageButton")
+openButton.Name = "ChilliOpenButton"
+openButton.Size = UDim2.new(0, 50, 0, 50)
+openButton.Position = UDim2.new(0.02, 0, 0.8, 0)
+openButton.BackgroundTransparency = 1
+openButton.Image = "rbxassetid://11842430906" -- ícone de fogo
+openButton.Visible = false
+openButton.Parent = guiParent
+
+-- funções
+local function getHumanoid()
+	local char = player.Character or player.CharacterAdded:Wait()
+	return char:FindFirstChildOfClass("Humanoid")
+end
+
+-- mantém velocidade infinita
+local function maintainSpeed()
+	while boosted and humanoid and humanoid.Parent do
+		if humanoid.WalkSpeed ~= customSpeed then
+			humanoid.WalkSpeed = customSpeed
+		end
+		task.wait(0.1)
+	end
+end
+
+local function setBoost(on)
+	humanoid = getHumanoid()
+	if not humanoid then return end
+
+	if on then
+		local speedNum = tonumber(speedBox.Text)
+		if not speedNum or speedNum <= 16 then
+			speedNum = 50
+			speedBox.Text = "50"
+		end
+		customSpeed = speedNum
+		originalSpeed = humanoid.WalkSpeed
+		humanoid.WalkSpeed = customSpeed
+		toggleButton.Text = "DESATIVAR BOOST"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
+		boosted = true
+		task.spawn(maintainSpeed)
+	else
+		boosted = false
+		if humanoid then
+			humanoid.WalkSpeed = originalSpeed
+		end
+		toggleButton.Text = "ATIVAR BOOST"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	end
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+	setBoost(not boosted)
+end)
+
+-- minimizar GUI
+minimizeButton.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	if minimized then
+		for _, obj in pairs(mainFrame:GetChildren()) do
+			if obj ~= title and obj ~= closeButton and obj ~= minimizeButton then
+				obj.Visible = false
+			end
+		end
+		mainFrame.Size = UDim2.new(0, 260, 0, 35)
+		minimizeButton.Text = "+"
+	else
+		for _, obj in pairs(mainFrame:GetChildren()) do
+			obj.Visible = true
+		end
+		mainFrame.Size = UDim2.new(0, 260, 0, 130)
+		minimizeButton.Text = "-"
+	end
+end)
+
+-- esconder GUI
+closeButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+	openButton.Visible = true
+end)
+
+-- reabrir GUI
+openButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = true
+	openButton.Visible = false
+end)
+
+-- reaplicar boost ao renascer
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	if boosted then
+		setBoost(true)
+	end
+end)
+
+-- sistema de drag
+local dragging, dragInput, dragStart, startPos
+local function update(input)
+	local delta = input.Position - dragStart
+	mainFrame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if dragging and dragInput then
+		update(dragInput)
+	end
+end)
