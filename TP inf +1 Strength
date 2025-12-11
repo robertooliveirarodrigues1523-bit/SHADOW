@@ -1,0 +1,333 @@
+------------------------------------------
+-- SISTEMA DE DETECÇÃO DO ID DO JOGO     --
+------------------------------------------
+local GameIDPermitido = 128602654120186
+
+if game.PlaceId ~= GameIDPermitido then
+    game.StarterGui:SetCore("SendNotification",{
+        Title = "Erro!";
+        Text = "Jogo não identificado.";
+        Duration = 5,
+    })
+    return -- Cancela tudo
+end
+
+------------------------------------------
+-- SISTEMA DE SEGURANÇA ANTI-DUPLICAÇÃO --
+------------------------------------------
+if getgenv().StrengthPanelRunning then
+    game.StarterGui:SetCore("SendNotification",{
+        Title = "Aviso";
+        Text = "A script já está executada!";
+        Duration = 4,
+    })
+    return
+end
+getgenv().StrengthPanelRunning = true
+
+------------------------------------------------
+-- SISTEMA DE SALVAMENTO PERMANENTE DA SENHA  --
+------------------------------------------------
+local saveFile = "strength_unlock.txt"
+local senhaCorreta = "SHADOW+1523"
+local senhaLiberada = false
+
+if isfile(saveFile) then
+    senhaLiberada = true
+end
+
+-----------------------
+-- FUNÇÃO CRIA GUI   --
+-----------------------
+function criarGUI()
+    local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+    ScreenGui.ResetOnSpawn = false
+    return ScreenGui
+end
+
+-----------------------------------------
+-- TELA DE SENHA (DRAG + MINIMIZAR)     --
+-----------------------------------------
+function abrirTelaSenha()
+    local gui = criarGUI()
+
+    local Frame = Instance.new("Frame", gui)
+    Frame.Size = UDim2.new(0, 250, 0, 150)
+    Frame.Position = UDim2.new(0.5, -125, 0.4, -75)
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Frame.Active = true
+    Frame.Draggable = true
+
+    local UIStroke = Instance.new("UIStroke", Frame)
+    UIStroke.Thickness = 2
+    UIStroke.Color = Color3.fromRGB(255,255,255)
+
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.Text = "Digite a Senha"
+    Title.BackgroundTransparency = 1
+    Title.TextColor3 = Color3.fromRGB(255,255,255)
+    Title.TextScaled = true
+    Title.Font = Enum.Font.GothamBold
+
+    local MinBtn = Instance.new("TextButton", Frame)
+    MinBtn.Size = UDim2.new(0, 25, 0, 25)
+    MinBtn.Position = UDim2.new(1, -55, 0, 5)
+    MinBtn.Text = "-"
+    MinBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    MinBtn.TextScaled = true
+    MinBtn.Font = Enum.Font.GothamBold
+
+    local CloseBtn = Instance.new("TextButton", Frame)
+    CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+    CloseBtn.Position = UDim2.new(1, -25, 0, 5)
+    CloseBtn.Text = "X"
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+    CloseBtn.TextScaled = true
+    CloseBtn.Font = Enum.Font.GothamBold
+
+    local minimized = false
+    MinBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        for _,v in pairs(Frame:GetChildren()) do
+            if v ~= MinBtn and v ~= CloseBtn and v ~= Title and v:IsA("GuiObject") then
+                v.Visible = not minimized
+            end
+        end
+        Frame.Size = minimized and UDim2.new(0,250,0,40) or UDim2.new(0,250,0,150)
+        MinBtn.Text = minimized and "+" or "-"
+    end)
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        gui:Destroy()
+        getgenv().StrengthPanelRunning = false
+    end)
+
+    local Box = Instance.new("TextBox", Frame)
+    Box.Size = UDim2.new(1, -20, 0, 35)
+    Box.Position = UDim2.new(0, 10, 0, 50)
+    Box.PlaceholderText = "Senha"
+    Box.Text = ""
+    Box.TextScaled = true
+    Box.Font = Enum.Font.GothamBold
+    Box.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    Box.TextColor3 = Color3.fromRGB(255,255,255)
+
+    local Enviar = Instance.new("TextButton", Frame)
+    Enviar.Size = UDim2.new(1, -20, 0, 35)
+    Enviar.Position = UDim2.new(0, 10, 0, 95)
+    Enviar.Text = "Enviar"
+    Enviar.TextScaled = true
+    Enviar.Font = Enum.Font.GothamBold
+    Enviar.BackgroundColor3 = Color3.fromRGB(0,120,255)
+    Enviar.TextColor3 = Color3.fromRGB(255,255,255)
+
+    Enviar.MouseButton1Click:Connect(function()
+        if Box.Text == senhaCorreta then
+            writefile(saveFile, "1")
+            gui:Destroy()
+            abrirPainel()
+        else
+            Enviar.Text = "Senha Errada!"
+            Enviar.BackgroundColor3 = Color3.fromRGB(200,0,0)
+            task.wait(1)
+            Enviar.Text = "Enviar"
+            Enviar.BackgroundColor3 = Color3.fromRGB(0,120,255)
+        end
+    end)
+end
+
+-----------------------------------------
+-- PAINEL PRINCIPAL (+1 Strength)       --
+-----------------------------------------
+function abrirPainel()
+    local TELEPORT_POS = Vector3.new(-22,22,2554)
+    local SPEED_NORMAL = 16
+    local SPEED_ATIVADO = 50
+
+    local tpAtivo = false
+    local speedAtivo = false
+    local minimized = false
+    local counting = false
+
+    local gui = criarGUI()
+
+    local Frame = Instance.new("Frame", gui)
+    Frame.Size = UDim2.new(0, 220, 0, 190)
+    Frame.Position = UDim2.new(0.5, -110, 0.3, -75)
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Frame.Active = true
+    Frame.Draggable = true
+
+    local UIStroke = Instance.new("UIStroke", Frame)
+    UIStroke.Thickness = 2
+    UIStroke.Color = Color3.fromRGB(255,255,255)
+
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Size = UDim2.new(1, 0, 0, 20)
+    Title.Text = "+1 Strength"
+    Title.BackgroundTransparency = 1
+    Title.TextColor3 = Color3.fromRGB(255,255,255)
+    Title.TextScaled = true
+    Title.Font = Enum.Font.GothamBold
+
+    local MinBtn = Instance.new("TextButton", Frame)
+    MinBtn.Size = UDim2.new(0, 25, 0, 25)
+    MinBtn.Position = UDim2.new(1, -55, 0, 0)
+    MinBtn.Text = "-"
+    MinBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    MinBtn.TextScaled = true
+    MinBtn.Font = Enum.Font.GothamBold
+
+    local CloseBtn = Instance.new("TextButton", Frame)
+    CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+    CloseBtn.Position = UDim2.new(1, -25, 0, 0)
+    CloseBtn.Text = "X"
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+    CloseBtn.TextScaled = true
+    CloseBtn.Font = Enum.Font.GothamBold
+
+    MinBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        for _,v in pairs(Frame:GetChildren()) do
+            if v ~= MinBtn and v ~= CloseBtn and v ~= Title and v:IsA("GuiObject") then
+                v.Visible = not minimized
+            end
+        end
+        Frame.Size = minimized and UDim2.new(0,220,0,40) or UDim2.new(0,220,0,190)
+        MinBtn.Text = minimized and "+" or "-"
+    end)
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        gui:Destroy()
+        getgenv().StrengthPanelRunning = false
+    end)
+
+    local TPBtn = Instance.new("TextButton", Frame)
+    TPBtn.Size = UDim2.new(1, -20, 0, 40)
+    TPBtn.Position = UDim2.new(0, 10, 0, 40)
+    TPBtn.Text = "TP Infinito (OFF)"
+    TPBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+    TPBtn.TextScaled = true
+    TPBtn.Font = Enum.Font.GothamBold
+    TPBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+    local SpeedBtn = Instance.new("TextButton", Frame)
+    SpeedBtn.Size = UDim2.new(1, -20, 0, 40)
+    SpeedBtn.Position = UDim2.new(0, 10, 0, 90)
+    SpeedBtn.Text = "Speed (OFF)"
+    SpeedBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+    SpeedBtn.TextScaled = true
+    SpeedBtn.Font = Enum.Font.GothamBold
+    SpeedBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+    local TPZBtn = Instance.new("TextButton", Frame)
+    TPZBtn.Size = UDim2.new(1, -20, 0, 40)
+    TPZBtn.Position = UDim2.new(0, 10, 0, 140)
+    TPZBtn.Text = "TP Zona (OFF)"
+    TPZBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+    TPZBtn.TextScaled = true
+    TPZBtn.Font = Enum.Font.GothamBold
+    TPZBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+    local tpzAtivo = false
+    local TPZ_POS = Vector3.new(79, 15, -262)
+
+    TPZBtn.MouseButton1Click:Connect(function()
+        tpzAtivo = not tpzAtivo
+        TPZBtn.Text = tpzAtivo and "TP Zona (ON)" or "TP Zona (OFF)"
+        TPZBtn.BackgroundColor3 = tpzAtivo and Color3.fromRGB(0,170,0) or Color3.fromRGB(150,0,0)
+
+        if tpzAtivo then
+            local char = game.Players.LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = CFrame.new(TPZ_POS)
+            end
+        end
+    end)
+
+    game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+        if tpzAtivo then
+            char:WaitForChild("HumanoidRootPart")
+            task.wait(0.3)
+            char.HumanoidRootPart.CFrame = CFrame.new(TPZ_POS)
+        end
+    end)
+
+    TPBtn.MouseButton1Click:Connect(function()
+        if counting then
+            counting = false
+        else
+            tpAtivo = not tpAtivo
+            if tpAtivo then
+                TPBtn.BackgroundColor3 = Color3.fromRGB(0,0,255)
+            else
+                TPBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+                TPBtn.Text = "TP Infinito (OFF)"
+            end
+        end
+    end)
+
+    SpeedBtn.MouseButton1Click:Connect(function()
+        speedAtivo = not speedAtivo
+        local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum then
+            hum.WalkSpeed = speedAtivo and SPEED_ATIVADO or SPEED_NORMAL
+        end
+        SpeedBtn.Text = speedAtivo and "Speed (ON)" or "Speed (OFF)"
+        SpeedBtn.BackgroundColor3 = speedAtivo and Color3.fromRGB(0,170,0) or Color3.fromRGB(150,0,0)
+    end)
+
+    game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        local hum = char:WaitForChild("Humanoid")
+        if speedAtivo then
+            hum.WalkSpeed = SPEED_ATIVADO
+        end
+    end)
+
+    task.spawn(function()
+        while true do
+            task.wait(0.1)
+            if tpAtivo and not counting then
+                local char = game.Players.LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local pos = char.HumanoidRootPart.Position
+                    if (pos - TELEPORT_POS).Magnitude > 3 then
+                        counting = true
+                        for i = 3,1,-1 do
+                            TPBtn.Text = "TP Infinito: "..i.."s"
+                            TPBtn.BackgroundColor3 = Color3.fromRGB(0,0,255)
+                            local interrupted = false
+
+                            local connection
+                            connection = TPBtn.MouseButton1Click:Connect(function()
+                                interrupted = true
+                            end)
+
+                            task.wait(1)
+                            connection:Disconnect()
+                            if interrupted then
+                                counting = false
+                                break
+                            end
+                        end
+                        if counting then
+                            char.HumanoidRootPart.CFrame = CFrame.new(TELEPORT_POS)
+                        end
+                        counting = false
+                    end
+                end
+            end
+        end
+    end)
+end
+
+---------------------------
+-- EXECUTAR SCRIPT        --
+---------------------------
+if senhaLiberada then
+    abrirPainel()
+else
+    abrirTelaSenha()
+end
