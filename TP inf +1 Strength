@@ -1,468 +1,336 @@
---[=[
- d888b  db    db d888888b
-]=]
+--// GUI Completa "Salvar e Carregar" com DataStore para salvar permanentemente
+local SCRIPT_ID = 152341
+local SCRIPT_NAME = "VGLP"
 
---------------------------------------------------
--- PLAYER
---------------------------------------------------
-local Players = game:GetService("Players")
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- DataStore
 local DataStoreService = game:GetService("DataStoreService")
-local player = Players.LocalPlayer
+local scriptStore = DataStoreService:GetDataStore("VGLP_Scripts")
+
+-- ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SalvarCarregarGUI"
+screenGui.Parent = playerGui
+
+-- Frame principal
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 500, 0, 350)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+mainFrame.BorderSizePixel = 2
+mainFrame.Parent = screenGui
+mainFrame.Active = true
+
+-- Barra de título
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+titleBar.Parent = mainFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -60, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Salvar e Carregar"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextSize = 18
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = titleBar
+
+-- Botão fechar
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 30, 1, 0)
+closeButton.Position = UDim2.new(1, -30, 0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.TextSize = 18
+closeButton.Parent = titleBar
+
+closeButton.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- Botão minimizar
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Size = UDim2.new(0, 30, 1, 0)
+minimizeButton.Position = UDim2.new(1, -60, 0, 0)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
+minimizeButton.Text = "-"
+minimizeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+minimizeButton.Font = Enum.Font.SourceSansBold
+minimizeButton.TextSize = 18
+minimizeButton.Parent = titleBar
+
+-- Drag funcional apenas pelo fundo da titleBar
 local UserInputService = game:GetService("UserInputService")
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
 
-local scriptStore = DataStoreService:GetDataStore("PlayerScripts")
-
---------------------------------------------------
--- GUI PRINCIPAL
---------------------------------------------------
-local LMG2L = {}
-
-LMG2L.ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-
--- PAINEL PRINCIPAL DE COMANDOS
-LMG2L.comandos = Instance.new("Frame", LMG2L.ScreenGui)
-LMG2L.comandos.Size = UDim2.new(0,582,0,400)
-LMG2L.comandos.Position = UDim2.new(0,314,0,78)
-LMG2L.comandos.BackgroundColor3 = Color3.fromRGB(1,7,33)
-LMG2L.comandos.BorderSizePixel = 0
-LMG2L.comandos.Visible = false
-Instance.new("UICorner", LMG2L.comandos)
-
--- TÍTULO FIXO
-LMG2L.titulo = Instance.new("TextBox", LMG2L.comandos)
-LMG2L.titulo.Text = "Script1.lua"
-LMG2L.titulo.Size = UDim2.new(0,140,0,38)
-LMG2L.titulo.Position = UDim2.new(0,16,0,6)
-LMG2L.titulo.BackgroundColor3 = Color3.fromRGB(2,2,46)
-LMG2L.titulo.TextColor3 = Color3.fromRGB(255,255,255)
-LMG2L.titulo.BorderSizePixel = 0
-LMG2L.titulo.TextEditable = false
-LMG2L.titulo.Active = false
-Instance.new("UICorner", LMG2L.titulo)
-
--- BOTÃO FECHAR (TOPO DIREITO)
-LMG2L.fechar = Instance.new("TextButton", LMG2L.comandos)
-LMG2L.fechar.Text = "X"
-LMG2L.fechar.Size = UDim2.new(0,38,0,38)
-LMG2L.fechar.Position = UDim2.new(1,-46,0,6)
-LMG2L.fechar.BackgroundColor3 = Color3.fromRGB(2,2,46)
-LMG2L.fechar.TextColor3 = Color3.fromRGB(255,255,255)
-LMG2L.fechar.BorderSizePixel = 0
-Instance.new("UICorner", LMG2L.fechar)
-
--- TEXTBOX
-LMG2L.textbox = Instance.new("TextBox", LMG2L.comandos)
-LMG2L.textbox.Text = "digitar script"
-LMG2L.textbox.Size = UDim2.new(0,570,0,286)
-LMG2L.textbox.Position = UDim2.new(0,4,0,50)
-LMG2L.textbox.BackgroundColor3 = Color3.fromRGB(9,1,38)
-LMG2L.textbox.TextWrapped = true
-LMG2L.textbox.BorderSizePixel = 0
-Instance.new("UICorner", LMG2L.textbox)
-
--- BOTÕES EXECUTE E CREAR
-LMG2L.execute = Instance.new("TextButton", LMG2L.comandos)
-LMG2L.execute.Text = "EXECUTE."
-LMG2L.execute.Size = UDim2.new(0,140,0,50)
-LMG2L.execute.Position = UDim2.new(0,16,0,336)
-LMG2L.execute.BackgroundColor3 = Color3.fromRGB(2,14,44)
-LMG2L.execute.TextColor3 = Color3.fromRGB(255,255,255)
-LMG2L.execute.BorderSizePixel = 0
-Instance.new("UICorner", LMG2L.execute)
-
-LMG2L.crear = Instance.new("TextButton", LMG2L.comandos)
-LMG2L.crear.Text = "CREAR"
-LMG2L.crear.Size = UDim2.new(0,140,0,50)
-LMG2L.crear.Position = UDim2.new(0,206,0,340)
-LMG2L.crear.BackgroundColor3 = Color3.fromRGB(2,14,44)
-LMG2L.crear.TextColor3 = Color3.fromRGB(255,255,255)
-LMG2L.crear.BorderSizePixel = 0
-Instance.new("UICorner", LMG2L.crear)
-
-LMG2L.clipboard = Instance.new("TextButton", LMG2L.comandos)
-LMG2L.clipboard.Text = "EXECUTE CLIPEBOARD"
-LMG2L.clipboard.Size = UDim2.new(0,140,0,50)
-LMG2L.clipboard.Position = UDim2.new(0,392,0,342)
-LMG2L.clipboard.BackgroundColor3 = Color3.fromRGB(2,14,44)
-LMG2L.clipboard.TextColor3 = Color3.fromRGB(255,255,255)
-LMG2L.clipboard.BorderSizePixel = 0
-Instance.new("UICorner", LMG2L.clipboard)
-
--- MENU PARA ABRIR COMANDOS
-LMG2L.menu = Instance.new("TextButton", LMG2L.ScreenGui)
-LMG2L.menu.Size = UDim2.new(0,50,0,50)
-LMG2L.menu.Position = UDim2.new(1,-60,1,-60)
-LMG2L.menu.Text = "≡"
-LMG2L.menu.BackgroundColor3 = Color3.fromRGB(20,20,60)
-LMG2L.menu.TextColor3 = Color3.fromRGB(255,255,255)
-LMG2L.menu.BorderSizePixel = 0
-Instance.new("UICorner", LMG2L.menu)
-
-LMG2L.menu.MouseButton1Click:Connect(function()
-	LMG2L.comandos.Visible = true
-end)
-
-LMG2L.fechar.MouseButton1Click:Connect(function()
-	LMG2L.comandos.Visible = false
-end)
-
---------------------------------------------------
--- BOTÃO FLUTUANTE +
---------------------------------------------------
-local floatButton = Instance.new("TextButton", LMG2L.ScreenGui)
-floatButton.Size = UDim2.new(0,50,0,50)
-floatButton.Position = UDim2.new(1,-70,1,-60)
-floatButton.Text = "+"
-floatButton.BackgroundColor3 = Color3.fromRGB(20,20,60)
-floatButton.TextColor3 = Color3.fromRGB(255,255,255)
-floatButton.BorderSizePixel = 0
-Instance.new("UICorner", floatButton)
-
-floatButton.MouseEnter:Connect(function()
-    floatButton.BackgroundColor3 = Color3.fromRGB(40,40,80)
-end)
-floatButton.MouseLeave:Connect(function()
-    floatButton.BackgroundColor3 = Color3.fromRGB(20,20,60)
-end)
-
---------------------------------------------------
--- PAINEL LATERAL DE SCRIPTS
---------------------------------------------------
-local lateralGUI = Instance.new("Frame", LMG2L.ScreenGui)
-lateralGUI.Size = UDim2.new(0,250,0,400)
-lateralGUI.Position = UDim2.new(0, LMG2L.comandos.Position.X.Offset + LMG2L.comandos.Size.X.Offset + 10, 0, LMG2L.comandos.Position.Y.Offset)
-lateralGUI.BackgroundColor3 = Color3.fromRGB(15,15,50)
-lateralGUI.BorderSizePixel = 0
-lateralGUI.Visible = false
-Instance.new("UICorner", lateralGUI)
-
--- Barra de título e drag
-local lateralTitle = Instance.new("Frame", lateralGUI)
-lateralTitle.Size = UDim2.new(1,0,0,30)
-lateralTitle.Position = UDim2.new(0,0,0,0)
-lateralTitle.BackgroundColor3 = Color3.fromRGB(2,2,46)
-Instance.new("UICorner", lateralTitle)
-
-local lateralTitleLabel = Instance.new("TextLabel", lateralTitle)
-lateralTitleLabel.Text = "Scripts Salvos"
-lateralTitleLabel.Size = UDim2.new(1,-60,1,0)
-lateralTitleLabel.Position = UDim2.new(0,5,0,0)
-lateralTitleLabel.BackgroundTransparency = 1
-lateralTitleLabel.TextColor3 = Color3.fromRGB(255,255,255)
-lateralTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local lateralClose = Instance.new("TextButton", lateralTitle)
-lateralClose.Text = "X"
-lateralClose.Size = UDim2.new(0,30,0,30)
-lateralClose.Position = UDim2.new(1,-35,0,0)
-lateralClose.BackgroundColor3 = Color3.fromRGB(2,2,46)
-lateralClose.TextColor3 = Color3.fromRGB(255,255,255)
-lateralClose.BorderSizePixel = 0
-Instance.new("UICorner", lateralClose)
-lateralClose.MouseButton1Click:Connect(function()
-    lateralGUI.Visible = false
-end)
-
--- Drag do painel lateral
-do
-    local dragging = false
-    local dragInput, mousePos, framePos
-
-    lateralTitle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            mousePos = input.Position
-            framePos = lateralGUI.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.Target:IsDescendantOf(closeButton) or input.Target:IsDescendantOf(minimizeButton) then
+            return
         end
-    end)
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
 
-    lateralTitle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
+titleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
 
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - mousePos
-            lateralGUI.Position = UDim2.new(0, framePos.X.Offset + delta.X, 0, framePos.Y.Offset + delta.Y)
-        end
-    end)
-end
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            0,
+            math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - mainFrame.Size.X.Offset),
+            0,
+            math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - mainFrame.Size.Y.Offset)
+        )
+    end
+end)
 
--- ScrollFrame para scripts
-local scrollFrame = Instance.new("ScrollingFrame", lateralGUI)
-scrollFrame.Size = UDim2.new(1,0,1,-30)
-scrollFrame.Position = UDim2.new(0,0,0,30)
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.BorderSizePixel = 0
-scrollFrame.CanvasSize = UDim2.new(0,0,0,0)
+-- ScrollingFrame
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -20, 1, -50)
+scrollFrame.Position = UDim2.new(0, 10, 0, 40)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollFrame.ScrollBarThickness = 6
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.Parent = mainFrame
 
-local layout = Instance.new("UIListLayout", scrollFrame)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Padding = UDim.new(0,5)
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.Parent = scrollFrame
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiListLayout.Padding = UDim.new(0, 5)
 
---------------------------------------------------
--- FUNÇÕES DE SCRIPTS
---------------------------------------------------
-local function atualizarGUIdeScripts()
-    for _,child in pairs(scrollFrame:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
+-- Botão +
+local addButton = Instance.new("TextButton")
+addButton.Size = UDim2.new(0, 30, 0, 30)
+addButton.AnchorPoint = Vector2.new(1, 1)
+addButton.Position = UDim2.new(1, -10, 1, -10)
+addButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+addButton.Text = "+"
+addButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+addButton.Font = Enum.Font.SourceSansBold
+addButton.TextSize = 20
+addButton.Parent = mainFrame
+
+-- Minimizar funcionalidade
+local isMinimized = false
+minimizeButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    mainFrame.Size = isMinimized and UDim2.new(0, 500, 0, 30) or UDim2.new(0, 500, 0, 350)
+    addButton.Visible = not isMinimized
+end)
+
+-- Função criar item salvo
+local function criarItemSalvo(nome, scriptConteudo, saveToDataStore)
+    local itemFrame = Instance.new("Frame")
+    itemFrame.Size = UDim2.new(1, 0, 0, 50)
+    itemFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    itemFrame.Parent = scrollFrame
+
+    local nomeLabel = Instance.new("TextLabel")
+    nomeLabel.Size = UDim2.new(0, 150, 1, 0)
+    nomeLabel.Position = UDim2.new(0, 10, 0, 0)
+    nomeLabel.Text = nome
+    nomeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nomeLabel.BackgroundTransparency = 1
+    nomeLabel.Font = Enum.Font.SourceSansBold
+    nomeLabel.TextSize = 16
+    nomeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nomeLabel.Parent = itemFrame
+
+    -- Deletar
+    local deletarButton = Instance.new("TextButton")
+    deletarButton.Size = UDim2.new(0, 60, 0, 30)
+    deletarButton.Position = UDim2.new(0, 170, 0, 10)
+    deletarButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    deletarButton.Text = "Deletar"
+    deletarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    deletarButton.Font = Enum.Font.SourceSansBold
+    deletarButton.TextSize = 14
+    deletarButton.Parent = itemFrame
+
+    deletarButton.MouseButton1Click:Connect(function()
+        itemFrame:Destroy()
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
+        -- Atualiza DataStore
+        local currentData = {}
+        for _, f in pairs(scrollFrame:GetChildren()) do
+            if f:IsA("Frame") and f:FindFirstChild("TextLabel") then
+                local label = f:FindFirstChildWhichIsA("TextLabel")
+                local scriptBtn = f:FindFirstChild("Executar")
+                table.insert(currentData, {Nome = label.Text, Script = scriptBtn and scriptBtn.ScriptConteudo or ""})
+            end
         end
-    end
-
-    local success, scripts = pcall(function()
-        return scriptStore:GetAsync(player.UserId) or {}
+        pcall(function()
+            scriptStore:SetAsync(player.UserId, currentData)
+        end)
     end)
 
-    if success then
-        for name, content in pairs(scripts) do
-            local entry = Instance.new("Frame", scrollFrame)
-            entry.Size = UDim2.new(1,-10,0,40)
-            entry.BackgroundColor3 = Color3.fromRGB(20,20,60)
-            entry.BorderSizePixel = 0
-            entry.Name = "ScriptEntry"
-            Instance.new("UICorner", entry)
+    -- Copiar
+    local copiarButton = Instance.new("TextButton")
+    copiarButton.Size = UDim2.new(0, 60, 0, 30)
+    copiarButton.Position = UDim2.new(0, 240, 0, 10)
+    copiarButton.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
+    copiarButton.Text = "Copiar"
+    copiarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copiarButton.Font = Enum.Font.SourceSansBold
+    copiarButton.TextSize = 14
+    copiarButton.Parent = itemFrame
 
-            local nameLabel = Instance.new("TextLabel", entry)
-            nameLabel.Text = name
-            nameLabel.Size = UDim2.new(0.4,0,1,0)
-            nameLabel.Position = UDim2.new(0,5,0,0)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
-            nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    copiarButton.MouseButton1Click:Connect(function()
+        pcall(function()
+            setclipboard(scriptConteudo)
+        end)
+    end)
 
-            local deleteButton = Instance.new("TextButton", entry)
-            deleteButton.Text = "DELETAR"
-            deleteButton.Size = UDim2.new(0.2,0,1,0)
-            deleteButton.Position = UDim2.new(0.45,0,0,0)
-            deleteButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
-            deleteButton.TextColor3 = Color3.fromRGB(255,255,255)
-            deleteButton.BorderSizePixel = 0
-            Instance.new("UICorner", deleteButton)
-            deleteButton.MouseButton1Click:Connect(function()
-                local success, err = pcall(function()
-                    local existingScripts = scriptStore:GetAsync(player.UserId) or {}
-                    existingScripts[name] = nil
-                    scriptStore:SetAsync(player.UserId, existingScripts)
-                end)
-                if success then atualizarGUIdeScripts() end
-            end)
+    -- Executar
+    local executeButton = Instance.new("TextButton")
+    executeButton.Size = UDim2.new(0, 60, 0, 30)
+    executeButton.Position = UDim2.new(0, 310, 0, 10)
+    executeButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    executeButton.Text = "Executar"
+    executeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    executeButton.Font = Enum.Font.SourceSansBold
+    executeButton.TextSize = 14
+    executeButton.Parent = itemFrame
 
-            local copyButton = Instance.new("TextButton", entry)
-            copyButton.Text = "COPIAR"
-            copyButton.Size = UDim2.new(0.15,0,1,0)
-            copyButton.Position = UDim2.new(0.65,0,0,0)
-            copyButton.BackgroundColor3 = Color3.fromRGB(0,100,150)
-            copyButton.TextColor3 = Color3.fromRGB(255,255,255)
-            copyButton.BorderSizePixel = 0
-            Instance.new("UICorner", copyButton)
-            copyButton.MouseButton1Click:Connect(function()
-                if setclipboard then setclipboard(content) end
-            end)
-
-            local executeButton = Instance.new("TextButton", entry)
-            executeButton.Text = "EXECUTE"
-            executeButton.Size = UDim2.new(0.2,0,1,0)
-            executeButton.Position = UDim2.new(0.8,0,0,0)
-            executeButton.BackgroundColor3 = Color3.fromRGB(0,150,0)
-            executeButton.TextColor3 = Color3.fromRGB(255,255,255)
-            executeButton.BorderSizePixel = 0
-            Instance.new("UICorner", executeButton)
-            executeButton.MouseButton1Click:Connect(function()
-                local f = loadstring(content)
-                if f then pcall(f) end
-            end)
+    executeButton.MouseButton1Click:Connect(function()
+        local func, err = loadstring(scriptConteudo)
+        if func then
+            pcall(func)
+        else
+            warn("Erro ao executar script:", err)
         end
-        scrollFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
-    else
-        warn("Erro ao carregar scripts")
+    end)
+
+    -- Salva no DataStore se necessário
+    if saveToDataStore then
+        local currentData = {}
+        for _, f in pairs(scrollFrame:GetChildren()) do
+            if f:IsA("Frame") and f:FindFirstChild("TextLabel") then
+                local label = f:FindFirstChildWhichIsA("TextLabel")
+                local scriptBtn = f:FindFirstChild("Executar")
+                table.insert(currentData, {Nome = label.Text, Script = scriptBtn and scriptBtn.ScriptConteudo or ""})
+            end
+        end
+        table.insert(currentData, {Nome = nome, Script = scriptConteudo})
+        pcall(function()
+            scriptStore:SetAsync(player.UserId, currentData)
+        end)
     end
+
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
 end
 
-local function criarScriptGUI()
-    local modal = Instance.new("Frame", LMG2L.ScreenGui)
-    modal.Size = UDim2.new(0,400,0,300)
-    modal.Position = UDim2.new(0.5,-200,0.5,-150)
-    modal.BackgroundColor3 = Color3.fromRGB(15,15,50)
-    modal.BorderSizePixel = 0
-    Instance.new("UICorner", modal)
+-- Carregar scripts salvos do DataStore
+pcall(function()
+    local savedScripts = scriptStore:GetAsync(player.UserId)
+    if savedScripts then
+        for _, s in pairs(savedScripts) do
+            criarItemSalvo(s.Nome, s.Script, false)
+        end
+    end
+end)
 
-    local title = Instance.new("TextLabel", modal)
-    title.Text = "Novo Script"
-    title.Size = UDim2.new(1,0,0,40)
-    title.Position = UDim2.new(0,0,0,0)
-    title.BackgroundColor3 = Color3.fromRGB(2,2,46)
-    title.TextColor3 = Color3.fromRGB(255,255,255)
-    title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 20
-    Instance.new("UICorner", title)
+-- Botão + (abrir janela adicionar script)
+addButton.MouseButton1Click:Connect(function()
+    local addGui = Instance.new("Frame")
+    addGui.Size = UDim2.new(0, 350, 0, 250)
+    addGui.Position = UDim2.new(0.5, -175, 0.5, -125)
+    addGui.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    addGui.BorderSizePixel = 2
+    addGui.Parent = screenGui
+    addGui.Active = true
 
-    local nameBox = Instance.new("TextBox", modal)
-    nameBox.PlaceholderText = "Nome do script"
-    nameBox.Size = UDim2.new(0,380,0,30)
-    nameBox.Position = UDim2.new(0,10,0,50)
-    nameBox.BackgroundColor3 = Color3.fromRGB(9,1,38)
-    nameBox.TextColor3 = Color3.fromRGB(255,255,255)
-    nameBox.BorderSizePixel = 0
-    Instance.new("UICorner", nameBox)
+    local smallTitle = Instance.new("TextLabel")
+    smallTitle.Size = UDim2.new(1, -20, 0, 25)
+    smallTitle.Position = UDim2.new(0, 10, 0, 10)
+    smallTitle.BackgroundTransparency = 1
+    smallTitle.Text = "Digite o nome e o script"
+    smallTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    smallTitle.Font = Enum.Font.SourceSans
+    smallTitle.TextSize = 16
+    smallTitle.TextXAlignment = Enum.TextXAlignment.Left
+    smallTitle.Parent = addGui
 
-    local scriptBox = Instance.new("TextBox", modal)
-    scriptBox.PlaceholderText = "Digite o script aqui"
-    scriptBox.Size = UDim2.new(0,380,0,180)
-    scriptBox.Position = UDim2.new(0,10,0,90)
-    scriptBox.BackgroundColor3 = Color3.fromRGB(9,1,38)
-    scriptBox.TextColor3 = Color3.fromRGB(255,255,255)
-    scriptBox.TextWrapped = true
+    local nomeBox = Instance.new("TextBox")
+    nomeBox.Size = UDim2.new(1, -20, 0, 30)
+    nomeBox.Position = UDim2.new(0, 10, 0, 40)
+    nomeBox.PlaceholderText = "Nome"
+    nomeBox.Text = ""
+    nomeBox.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    nomeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nomeBox.ClearTextOnFocus = false
+    nomeBox.Font = Enum.Font.SourceSans
+    nomeBox.TextSize = 18
+    nomeBox.Parent = addGui
+
+    local scriptBox = Instance.new("TextBox")
+    scriptBox.Size = UDim2.new(1, -20, 0, 130)
+    scriptBox.Position = UDim2.new(0, 10, 0, 80)
+    scriptBox.PlaceholderText = "Script"
+    scriptBox.Text = ""
+    scriptBox.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    scriptBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     scriptBox.ClearTextOnFocus = false
     scriptBox.MultiLine = true
-    scriptBox.BorderSizePixel = 0
-    Instance.new("UICorner", scriptBox)
+    scriptBox.Font = Enum.Font.SourceSans
+    scriptBox.TextSize = 16
+    scriptBox.Parent = addGui
 
-    local cancelButton = Instance.new("TextButton", modal)
-    cancelButton.Text = "Cancelar"
-    cancelButton.Size = UDim2.new(0,180,0,40)
-    cancelButton.Position = UDim2.new(0,10,1,-50)
-    cancelButton.BackgroundColor3 = Color3.fromRGB(100,0,0)
-    cancelButton.TextColor3 = Color3.fromRGB(255,255,255)
-    cancelButton.BorderSizePixel = 0
-    Instance.new("UICorner", cancelButton)
-    cancelButton.MouseButton1Click:Connect(function()
-        modal:Destroy()
+    local cancelarButton = Instance.new("TextButton")
+    cancelarButton.Size = UDim2.new(0, 100, 0, 30)
+    cancelarButton.Position = UDim2.new(0, 10, 1, -40)
+    cancelarButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    cancelarButton.Text = "Cancelar"
+    cancelarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cancelarButton.Font = Enum.Font.SourceSansBold
+    cancelarButton.TextSize = 18
+    cancelarButton.Parent = addGui
+
+    cancelarButton.MouseButton1Click:Connect(function()
+        addGui:Destroy()
     end)
 
-    local saveButton = Instance.new("TextButton", modal)
-    saveButton.Text = "Salvar"
-    saveButton.Size = UDim2.new(0,180,0,40)
-    saveButton.Position = UDim2.new(1,-190,1,-50)
-    saveButton.BackgroundColor3 = Color3.fromRGB(2,14,44)
-    saveButton.TextColor3 = Color3.fromRGB(255,255,255)
-    saveButton.BorderSizePixel = 0
-    Instance.new("UICorner", saveButton)
+    local salvarButton = Instance.new("TextButton")
+    salvarButton.Size = UDim2.new(0, 100, 0, 30)
+    salvarButton.Position = UDim2.new(0, 120, 1, -40)
+    salvarButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    salvarButton.Text = "Salvar"
+    salvarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    salvarButton.Font = Enum.Font.SourceSansBold
+    salvarButton.TextSize = 18
+    salvarButton.Parent = addGui
 
-    saveButton.MouseButton1Click:Connect(function()
-        local scriptName = nameBox.Text
-        local scriptContent = scriptBox.Text
-        if scriptName ~= "" and scriptContent ~= "" then
-            local success, err = pcall(function()
-                local existingScripts = scriptStore:GetAsync(player.UserId) or {}
-                existingScripts[scriptName] = scriptContent
-                scriptStore:SetAsync(player.UserId, existingScripts)
-            end)
-            if success then
-                modal:Destroy()
-                lateralGUI.Visible = true
-                atualizarGUIdeScripts()
-            else
-                warn("Erro ao salvar script:", err)
-            end
+    salvarButton.MouseButton1Click:Connect(function()
+        local nome = nomeBox.Text
+        local scriptConteudo = scriptBox.Text
+        if nome ~= "" and scriptConteudo ~= "" then
+            criarItemSalvo(nome, scriptConteudo, true)
+            addGui:Destroy()
         else
-            print("Preencha o nome e o script antes de salvar.")
+            warn("Nome ou script vazio!")
         end
     end)
-end
-
-floatButton.MouseButton1Click:Connect(function()
-    criarScriptGUI()
 end)
-
---------------------------------------------------
--- SISTEMA DE EXECUÇÃO ORIGINAL
---------------------------------------------------
-local SPECIAL_ID = "152341"
-local executing = false
-local lastExecutedCode = nil
-
-local function hasID(text)
-    return text:find(SPECIAL_ID) ~= nil
-end
-
-local function parseVGLP(text)
-    local lines = {}
-    for l in text:gmatch("[^\r\n]+") do
-        table.insert(lines, l)
-    end
-    if #lines >= 2 and lines[2]:match("^VGLP:") then
-        return true, lines
-    end
-    return false
-end
-
-local function canExecute(code)
-    if lastExecutedCode == code then
-        return false
-    end
-    lastExecutedCode = code
-    return true
-end
-
-local function executeVGLP(lines, raw)
-    if executing or not canExecute(raw) then return end
-    executing = true
-    for i = 3, #lines do
-        local args = string.split(lines[i], " ")
-        if args[1] == "PRINT" then
-            print("[VGLP]", table.concat(args, " ", 2))
-        elseif args[1] == "WAIT" then
-            local t = tonumber(args[2])
-            if t then task.wait(t) end
-        end
-    end
-    executing = false
-end
-
-local function executeRaw(code)
-    if executing or not canExecute(code) then return end
-    executing = true
-    local f = loadstring(code)
-    if f then pcall(f) end
-    executing = false
-end
-
---------------------------------------------------
--- BOTÕES
---------------------------------------------------
-LMG2L.execute.MouseButton1Click:Connect(function()
-    local text = LMG2L.textbox.Text
-    if hasID(text) then
-        executeRaw(text)
-    else
-        local ok, lines = parseVGLP(text)
-        if ok then executeVGLP(lines, text) end
-    end
-end)
-
-LMG2L.crear.MouseButton1Click:Connect(function()
-    LMG2L.textbox.Text = ""
-    lastExecutedCode = nil
-    executing = false
-end)
-
-LMG2L.clipboard.MouseButton1Click:Connect(function()
-    local text = LMG2L.textbox.Text
-    if hasID(text) then
-        executeRaw(text)
-    else
-        local ok, lines = parseVGLP(text)
-        if ok then executeVGLP(lines, text) end
-    end
-    if setclipboard then
-        setclipboard(text)
-    end
-end)
-
-LMG2L.fechar.MouseButton1Click:Connect(function()
-    LMG2L.comandos.Visible = false
-    lastExecutedCode = nil
-    executing = false
-end)
-
--- Atualiza GUI de scripts salvos ao iniciar
-atualizarGUIdeScripts()
