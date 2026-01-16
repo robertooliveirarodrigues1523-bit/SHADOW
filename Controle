@@ -1,336 +1,142 @@
---// GUI Completa "Salvar e Carregar" com DataStore para salvar permanentemente
-local SCRIPT_ID = 152341
-local SCRIPT_NAME = "VGLP"
+-- VARREDURA GLOBAL DE SEGURANÇA (Anti-Multiplicação)
+local SCRIPT_KEY = "DeltaHP_IsActive_2026"
 
-local player = game.Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
--- DataStore
-local DataStoreService = game:GetService("DataStoreService")
-local scriptStore = DataStoreService:GetDataStore("VGLP_Scripts")
-
--- ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SalvarCarregarGUI"
-screenGui.Parent = playerGui
-
--- Frame principal
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 350)
-mainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
-mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-mainFrame.BorderSizePixel = 2
-mainFrame.Parent = screenGui
-mainFrame.Active = true
-
--- Barra de título
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 30)
-titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-titleBar.Parent = mainFrame
-
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -60, 1, 0)
-titleLabel.Position = UDim2.new(0, 10, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Salvar e Carregar"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextSize = 18
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = titleBar
-
--- Botão fechar
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 30, 1, 0)
-closeButton.Position = UDim2.new(1, -30, 0, 0)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.TextSize = 18
-closeButton.Parent = titleBar
-
-closeButton.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
-
--- Botão minimizar
-local minimizeButton = Instance.new("TextButton")
-minimizeButton.Size = UDim2.new(0, 30, 1, 0)
-minimizeButton.Position = UDim2.new(1, -60, 0, 0)
-minimizeButton.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
-minimizeButton.Text = "-"
-minimizeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-minimizeButton.Font = Enum.Font.SourceSansBold
-minimizeButton.TextSize = 18
-minimizeButton.Parent = titleBar
-
--- Drag funcional apenas pelo fundo da titleBar
-local UserInputService = game:GetService("UserInputService")
-local dragging = false
-local dragInput = nil
-local dragStart = nil
-local startPos = nil
-
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if input.Target:IsDescendantOf(closeButton) or input.Target:IsDescendantOf(minimizeButton) then
-            return
-        end
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-titleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(
-            0,
-            math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - mainFrame.Size.X.Offset),
-            0,
-            math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - mainFrame.Size.Y.Offset)
-        )
-    end
-end)
-
--- ScrollingFrame
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1, -20, 1, -50)
-scrollFrame.Position = UDim2.new(0, 10, 0, 40)
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-scrollFrame.ScrollBarThickness = 6
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.Parent = mainFrame
-
-local uiListLayout = Instance.new("UIListLayout")
-uiListLayout.Parent = scrollFrame
-uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-uiListLayout.Padding = UDim.new(0, 5)
-
--- Botão +
-local addButton = Instance.new("TextButton")
-addButton.Size = UDim2.new(0, 30, 0, 30)
-addButton.AnchorPoint = Vector2.new(1, 1)
-addButton.Position = UDim2.new(1, -10, 1, -10)
-addButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-addButton.Text = "+"
-addButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-addButton.Font = Enum.Font.SourceSansBold
-addButton.TextSize = 20
-addButton.Parent = mainFrame
-
--- Minimizar funcionalidade
-local isMinimized = false
-minimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    mainFrame.Size = isMinimized and UDim2.new(0, 500, 0, 30) or UDim2.new(0, 500, 0, 350)
-    addButton.Visible = not isMinimized
-end)
-
--- Função criar item salvo
-local function criarItemSalvo(nome, scriptConteudo, saveToDataStore)
-    local itemFrame = Instance.new("Frame")
-    itemFrame.Size = UDim2.new(1, 0, 0, 50)
-    itemFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    itemFrame.Parent = scrollFrame
-
-    local nomeLabel = Instance.new("TextLabel")
-    nomeLabel.Size = UDim2.new(0, 150, 1, 0)
-    nomeLabel.Position = UDim2.new(0, 10, 0, 0)
-    nomeLabel.Text = nome
-    nomeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nomeLabel.BackgroundTransparency = 1
-    nomeLabel.Font = Enum.Font.SourceSansBold
-    nomeLabel.TextSize = 16
-    nomeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nomeLabel.Parent = itemFrame
-
-    -- Deletar
-    local deletarButton = Instance.new("TextButton")
-    deletarButton.Size = UDim2.new(0, 60, 0, 30)
-    deletarButton.Position = UDim2.new(0, 170, 0, 10)
-    deletarButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    deletarButton.Text = "Deletar"
-    deletarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    deletarButton.Font = Enum.Font.SourceSansBold
-    deletarButton.TextSize = 14
-    deletarButton.Parent = itemFrame
-
-    deletarButton.MouseButton1Click:Connect(function()
-        itemFrame:Destroy()
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
-        -- Atualiza DataStore
-        local currentData = {}
-        for _, f in pairs(scrollFrame:GetChildren()) do
-            if f:IsA("Frame") and f:FindFirstChild("TextLabel") then
-                local label = f:FindFirstChildWhichIsA("TextLabel")
-                local scriptBtn = f:FindFirstChild("Executar")
-                table.insert(currentData, {Nome = label.Text, Script = scriptBtn and scriptBtn.ScriptConteudo or ""})
-            end
-        end
-        pcall(function()
-            scriptStore:SetAsync(player.UserId, currentData)
-        end)
-    end)
-
-    -- Copiar
-    local copiarButton = Instance.new("TextButton")
-    copiarButton.Size = UDim2.new(0, 60, 0, 30)
-    copiarButton.Position = UDim2.new(0, 240, 0, 10)
-    copiarButton.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
-    copiarButton.Text = "Copiar"
-    copiarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    copiarButton.Font = Enum.Font.SourceSansBold
-    copiarButton.TextSize = 14
-    copiarButton.Parent = itemFrame
-
-    copiarButton.MouseButton1Click:Connect(function()
-        pcall(function()
-            setclipboard(scriptConteudo)
-        end)
-    end)
-
-    -- Executar
-    local executeButton = Instance.new("TextButton")
-    executeButton.Size = UDim2.new(0, 60, 0, 30)
-    executeButton.Position = UDim2.new(0, 310, 0, 10)
-    executeButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    executeButton.Text = "Executar"
-    executeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    executeButton.Font = Enum.Font.SourceSansBold
-    executeButton.TextSize = 14
-    executeButton.Parent = itemFrame
-
-    executeButton.MouseButton1Click:Connect(function()
-        local func, err = loadstring(scriptConteudo)
-        if func then
-            pcall(func)
-        else
-            warn("Erro ao executar script:", err)
-        end
-    end)
-
-    -- Salva no DataStore se necessário
-    if saveToDataStore then
-        local currentData = {}
-        for _, f in pairs(scrollFrame:GetChildren()) do
-            if f:IsA("Frame") and f:FindFirstChild("TextLabel") then
-                local label = f:FindFirstChildWhichIsA("TextLabel")
-                local scriptBtn = f:FindFirstChild("Executar")
-                table.insert(currentData, {Nome = label.Text, Script = scriptBtn and scriptBtn.ScriptConteudo or ""})
-            end
-        end
-        table.insert(currentData, {Nome = nome, Script = scriptConteudo})
-        pcall(function()
-            scriptStore:SetAsync(player.UserId, currentData)
-        end)
-    end
-
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
+if _G[SCRIPT_KEY] then
+    -- Se a chave global já existe, outro script igual a este já está rodando.
+    print("Delta Executor HP Script: Já está em execução, interrompendo nova execução.")
+    return -- Interrompe a execução imediatamente
 end
 
--- Carregar scripts salvos do DataStore
-pcall(function()
-    local savedScripts = scriptStore:GetAsync(player.UserId)
-    if savedScripts then
-        for _, s in pairs(savedScripts) do
-            criarItemSalvo(s.Nome, s.Script, false)
-        end
+-- Define a chave global, indicando que este script está ativo
+_G[SCRIPT_KEY] = true
+print("Delta Executor HP Script: Iniciado com sucesso.")
+
+
+-- ******************************************************
+-- O CÓDIGO DA BARRA DE VIDA COMEÇA AQUI
+-- ******************************************************
+
+local TweenService = game:GetService("TweenService")
+local player = game.Players.LocalPlayer
+-- ... (O restante do código da UI e da lógica de animação de 0.5s permanece o mesmo) ...
+
+-- Criando a Interface
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeltaFastHP_2026"
+ScreenGui.Parent = game.CoreGui
+
+-- Moldura Principal
+local MainBar = Instance.new("Frame")
+MainBar.Name = "MainBar"
+MainBar.Parent = ScreenGui
+MainBar.Size = UDim2.new(0, 300, 0, 25)
+MainBar.Position = UDim2.new(0.5, 0, 0.945, 0)
+MainBar.AnchorPoint = Vector2.new(0.5, 0.5)
+MainBar.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+MainBar.BackgroundTransparency = 0.4
+MainBar.ClipsDescendants = true
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(1, 0)
+UICorner.Parent = MainBar
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(0, 0, 0)
+UIStroke.Parent = MainBar
+
+-- Barra de Preenchimento
+local FillBar = Instance.new("Frame")
+FillBar.Name = "FillBar"
+FillBar.Parent = MainBar
+FillBar.Size = UDim2.new(1, 0, 1, 0)
+FillBar.BackgroundColor3 = Color3.fromRGB(30, 180, 30)
+FillBar.BorderSizePixel = 0
+
+local FillCorner = Instance.new("UICorner")
+FillCorner.CornerRadius = UDim.new(1, 0)
+FillCorner.Parent = FillBar
+
+-- Texto "HP" Fixo
+local HPLabel = Instance.new("TextLabel")
+HPLabel.Parent = MainBar
+HPLabel.BackgroundTransparency = 1
+HPLabel.Position = UDim2.new(0, 15, 0, 0)
+HPLabel.Size = UDim2.new(0, 40, 1, 0)
+HPLabel.Text = "HP"
+HPLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+HPLabel.Font = Enum.Font.GothamBold
+HPLabel.TextSize = 18
+HPLabel.TextXAlignment = Enum.TextXAlignment.Left
+HPLabel.ZIndex = 5
+
+-- Texto Centralizado (Número + %)
+local HPDisplay = Instance.new("TextLabel")
+HPDisplay.Name = "HPDisplay"
+HPDisplay.Parent = MainBar
+HPDisplay.BackgroundTransparency = 1
+HPDisplay.Size = UDim2.new(1, 0, 1, 0)
+HPDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+HPDisplay.Font = Enum.Font.GothamBold
+HPDisplay.TextSize = 18
+HPDisplay.ZIndex = 5
+
+local currentTween = nil
+local currentNumberThread = nil
+
+local function updateUI(humanoid)
+    local health = humanoid.Health
+    local maxHealth = humanoid.MaxHealth
+    local percent = math.clamp(health / maxHealth, 0, 1)
+    
+    local targetColor
+    if health <= 0 then
+        targetColor = Color3.fromRGB(200, 40, 40)
+    elseif percent <= 0.1 then
+        targetColor = Color3.fromRGB(200, 40, 40)
+    elseif percent <= 0.5 then
+        targetColor = Color3.fromRGB(220, 180, 0)
+    elseif health >= maxHealth then
+        targetColor = Color3.fromRGB(30, 180, 30)
+    else
+        targetColor = Color3.fromRGB(60, 60, 60)
     end
-end)
 
--- Botão + (abrir janela adicionar script)
-addButton.MouseButton1Click:Connect(function()
-    local addGui = Instance.new("Frame")
-    addGui.Size = UDim2.new(0, 350, 0, 250)
-    addGui.Position = UDim2.new(0.5, -175, 0.5, -125)
-    addGui.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    addGui.BorderSizePixel = 2
-    addGui.Parent = screenGui
-    addGui.Active = true
+    if currentTween then currentTween:Cancel() end
+    if currentNumberThread then task.cancel(currentNumberThread) end
 
-    local smallTitle = Instance.new("TextLabel")
-    smallTitle.Size = UDim2.new(1, -20, 0, 25)
-    smallTitle.Position = UDim2.new(0, 10, 0, 10)
-    smallTitle.BackgroundTransparency = 1
-    smallTitle.Text = "Digite o nome e o script"
-    smallTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    smallTitle.Font = Enum.Font.SourceSans
-    smallTitle.TextSize = 16
-    smallTitle.TextXAlignment = Enum.TextXAlignment.Left
-    smallTitle.Parent = addGui
+    if health <= 0 then FillBar.BackgroundColor3 = targetColor end
 
-    local nomeBox = Instance.new("TextBox")
-    nomeBox.Size = UDim2.new(1, -20, 0, 30)
-    nomeBox.Position = UDim2.new(0, 10, 0, 40)
-    nomeBox.PlaceholderText = "Nome"
-    nomeBox.Text = ""
-    nomeBox.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    nomeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nomeBox.ClearTextOnFocus = false
-    nomeBox.Font = Enum.Font.SourceSans
-    nomeBox.TextSize = 18
-    nomeBox.Parent = addGui
+    currentTween = TweenService:Create(FillBar, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(percent, 0, 1, 0),
+        BackgroundColor3 = targetColor
+    })
+    currentTween:Play()
 
-    local scriptBox = Instance.new("TextBox")
-    scriptBox.Size = UDim2.new(1, -20, 0, 130)
-    scriptBox.Position = UDim2.new(0, 10, 0, 80)
-    scriptBox.PlaceholderText = "Script"
-    scriptBox.Text = ""
-    scriptBox.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    scriptBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    scriptBox.ClearTextOnFocus = false
-    scriptBox.MultiLine = true
-    scriptBox.Font = Enum.Font.SourceSans
-    scriptBox.TextSize = 16
-    scriptBox.Parent = addGui
-
-    local cancelarButton = Instance.new("TextButton")
-    cancelarButton.Size = UDim2.new(0, 100, 0, 30)
-    cancelarButton.Position = UDim2.new(0, 10, 1, -40)
-    cancelarButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    cancelarButton.Text = "Cancelar"
-    cancelarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    cancelarButton.Font = Enum.Font.SourceSansBold
-    cancelarButton.TextSize = 18
-    cancelarButton.Parent = addGui
-
-    cancelarButton.MouseButton1Click:Connect(function()
-        addGui:Destroy()
-    end)
-
-    local salvarButton = Instance.new("TextButton")
-    salvarButton.Size = UDim2.new(0, 100, 0, 30)
-    salvarButton.Position = UDim2.new(0, 120, 1, -40)
-    salvarButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    salvarButton.Text = "Salvar"
-    salvarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    salvarButton.Font = Enum.Font.SourceSansBold
-    salvarButton.TextSize = 18
-    salvarButton.Parent = addGui
-
-    salvarButton.MouseButton1Click:Connect(function()
-        local nome = nomeBox.Text
-        local scriptConteudo = scriptBox.Text
-        if nome ~= "" and scriptConteudo ~= "" then
-            criarItemSalvo(nome, scriptConteudo, true)
-            addGui:Destroy()
-        else
-            warn("Nome ou script vazio!")
+    currentNumberThread = task.spawn(function()
+        local startValue = tonumber(HPDisplay.Text:match("%d+")) or 0
+        local endValue = math.floor(health)
+        local startTick = tick()
+        
+        while tick() - startTick < 0.5 do
+            local elapsed = tick() - startTick
+            local progress = elapsed / 0.5
+            local lerpedValue = math.floor(startValue + (endValue - startValue) * progress)
+            HPDisplay.Text = math.max(0, lerpedValue) .. "%"
+            task.wait()
         end
+        HPDisplay.Text = math.max(0, endValue) .. "%"
     end)
-end)
+end
+
+local function setup(char)
+    local humanoid = char:WaitForChild("Humanoid")
+    FillBar.Size = UDim2.new(0, 0, 1, 0)
+    HPDisplay.Text = "0%"
+    humanoid.HealthChanged:Connect(function() updateUI(humanoid) end)
+    humanoid.Died:Connect(function() updateUI(humanoid) end)
+    updateUI(humanoid)
+end
+
+player.CharacterAdded:Connect(setup)
+if player.Character then setup(player.Character) end
