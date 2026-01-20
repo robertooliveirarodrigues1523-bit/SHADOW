@@ -1,336 +1,146 @@
---// GUI Completa "Salvar e Carregar" com DataStore para salvar permanentemente
-local SCRIPT_ID = 152341
-local SCRIPT_NAME = "VGLP"
+-- VERIFICAÇÃO DE ID DO JOGO (PLACE ID)
+if game.PlaceId ~= 105241313130846 then return end
 
-local player = game.Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+-- SISTEMA ANTI-MULTIPLICAÇÃO
+if _G.ScriptIlhaExecutado then return else _G.ScriptIlhaExecutado = true end
 
--- DataStore
-local DataStoreService = game:GetService("DataStoreService")
-local scriptStore = DataStoreService:GetDataStore("VGLP_Scripts")
+-- 1. CONFIGURAÇÕES
+local Player = game.Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Rand = Random.new()
 
--- ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SalvarCarregarGUI"
-screenGui.Parent = playerGui
+local TAMANHO_ILHA = 1000
+local POSICAO_ILHA = Vector3.new(0, 15000, 0)
+local TOTAL_ARVORES = 535
+local TOTAL_PEDRAS_ILHA = 150
+local COD_FOGUEIRA, COD_VAGALUMES, COD_ILHA, COD_TEMPO = "001", "002", "003", "004"
 
--- Frame principal
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 350)
-mainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
-mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-mainFrame.BorderSizePixel = 2
-mainFrame.Parent = screenGui
-mainFrame.Active = true
+local tempoAtivado, ilha, estado = false, nil, "normal"
 
--- Barra de título
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 30)
-titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-titleBar.Parent = mainFrame
+-- Interface Fade
+local ScreenGui = Instance.new("ScreenGui", Player.PlayerGui)
+ScreenGui.IgnoreGuiInset = true
+local BlackFrame = Instance.new("Frame", ScreenGui)
+BlackFrame.Size, BlackFrame.BackgroundColor3, BlackFrame.BackgroundTransparency = UDim2.new(1, 0, 1, 0), Color3.new(0, 0, 0), 1
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -60, 1, 0)
-titleLabel.Position = UDim2.new(0, 10, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Salvar e Carregar"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextSize = 18
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = titleBar
-
--- Botão fechar
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 30, 1, 0)
-closeButton.Position = UDim2.new(1, -30, 0, 0)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.TextSize = 18
-closeButton.Parent = titleBar
-
-closeButton.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
-
--- Botão minimizar
-local minimizeButton = Instance.new("TextButton")
-minimizeButton.Size = UDim2.new(0, 30, 1, 0)
-minimizeButton.Position = UDim2.new(1, -60, 0, 0)
-minimizeButton.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
-minimizeButton.Text = "-"
-minimizeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-minimizeButton.Font = Enum.Font.SourceSansBold
-minimizeButton.TextSize = 18
-minimizeButton.Parent = titleBar
-
--- Drag funcional apenas pelo fundo da titleBar
-local UserInputService = game:GetService("UserInputService")
-local dragging = false
-local dragInput = nil
-local dragStart = nil
-local startPos = nil
-
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if input.Target:IsDescendantOf(closeButton) or input.Target:IsDescendantOf(minimizeButton) then
-            return
+-- 2. FUNÇÃO INVISIBILIDADE
+local function setInvisibilidade(char, bool)
+    for _, v in pairs(char:GetDescendants()) do
+        if v:IsA("BasePart") or v:IsA("Decal") then
+            v.Transparency = bool and 1 or (v.Name == "HumanoidRootPart" and 1 or 0)
         end
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
     end
-end)
-
-titleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(
-            0,
-            math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - mainFrame.Size.X.Offset),
-            0,
-            math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - mainFrame.Size.Y.Offset)
-        )
-    end
-end)
-
--- ScrollingFrame
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1, -20, 1, -50)
-scrollFrame.Position = UDim2.new(0, 10, 0, 40)
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-scrollFrame.ScrollBarThickness = 6
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.Parent = mainFrame
-
-local uiListLayout = Instance.new("UIListLayout")
-uiListLayout.Parent = scrollFrame
-uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-uiListLayout.Padding = UDim.new(0, 5)
-
--- Botão +
-local addButton = Instance.new("TextButton")
-addButton.Size = UDim2.new(0, 30, 0, 30)
-addButton.AnchorPoint = Vector2.new(1, 1)
-addButton.Position = UDim2.new(1, -10, 1, -10)
-addButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-addButton.Text = "+"
-addButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-addButton.Font = Enum.Font.SourceSansBold
-addButton.TextSize = 20
-addButton.Parent = mainFrame
-
--- Minimizar funcionalidade
-local isMinimized = false
-minimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    mainFrame.Size = isMinimized and UDim2.new(0, 500, 0, 30) or UDim2.new(0, 500, 0, 350)
-    addButton.Visible = not isMinimized
-end)
-
--- Função criar item salvo
-local function criarItemSalvo(nome, scriptConteudo, saveToDataStore)
-    local itemFrame = Instance.new("Frame")
-    itemFrame.Size = UDim2.new(1, 0, 0, 50)
-    itemFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    itemFrame.Parent = scrollFrame
-
-    local nomeLabel = Instance.new("TextLabel")
-    nomeLabel.Size = UDim2.new(0, 150, 1, 0)
-    nomeLabel.Position = UDim2.new(0, 10, 0, 0)
-    nomeLabel.Text = nome
-    nomeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nomeLabel.BackgroundTransparency = 1
-    nomeLabel.Font = Enum.Font.SourceSansBold
-    nomeLabel.TextSize = 16
-    nomeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nomeLabel.Parent = itemFrame
-
-    -- Deletar
-    local deletarButton = Instance.new("TextButton")
-    deletarButton.Size = UDim2.new(0, 60, 0, 30)
-    deletarButton.Position = UDim2.new(0, 170, 0, 10)
-    deletarButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    deletarButton.Text = "Deletar"
-    deletarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    deletarButton.Font = Enum.Font.SourceSansBold
-    deletarButton.TextSize = 14
-    deletarButton.Parent = itemFrame
-
-    deletarButton.MouseButton1Click:Connect(function()
-        itemFrame:Destroy()
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
-        -- Atualiza DataStore
-        local currentData = {}
-        for _, f in pairs(scrollFrame:GetChildren()) do
-            if f:IsA("Frame") and f:FindFirstChild("TextLabel") then
-                local label = f:FindFirstChildWhichIsA("TextLabel")
-                local scriptBtn = f:FindFirstChild("Executar")
-                table.insert(currentData, {Nome = label.Text, Script = scriptBtn and scriptBtn.ScriptConteudo or ""})
-            end
-        end
-        pcall(function()
-            scriptStore:SetAsync(player.UserId, currentData)
-        end)
-    end)
-
-    -- Copiar
-    local copiarButton = Instance.new("TextButton")
-    copiarButton.Size = UDim2.new(0, 60, 0, 30)
-    copiarButton.Position = UDim2.new(0, 240, 0, 10)
-    copiarButton.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
-    copiarButton.Text = "Copiar"
-    copiarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    copiarButton.Font = Enum.Font.SourceSansBold
-    copiarButton.TextSize = 14
-    copiarButton.Parent = itemFrame
-
-    copiarButton.MouseButton1Click:Connect(function()
-        pcall(function()
-            setclipboard(scriptConteudo)
-        end)
-    end)
-
-    -- Executar
-    local executeButton = Instance.new("TextButton")
-    executeButton.Size = UDim2.new(0, 60, 0, 30)
-    executeButton.Position = UDim2.new(0, 310, 0, 10)
-    executeButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    executeButton.Text = "Executar"
-    executeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    executeButton.Font = Enum.Font.SourceSansBold
-    executeButton.TextSize = 14
-    executeButton.Parent = itemFrame
-
-    executeButton.MouseButton1Click:Connect(function()
-        local func, err = loadstring(scriptConteudo)
-        if func then
-            pcall(func)
-        else
-            warn("Erro ao executar script:", err)
-        end
-    end)
-
-    -- Salva no DataStore se necessário
-    if saveToDataStore then
-        local currentData = {}
-        for _, f in pairs(scrollFrame:GetChildren()) do
-            if f:IsA("Frame") and f:FindFirstChild("TextLabel") then
-                local label = f:FindFirstChildWhichIsA("TextLabel")
-                local scriptBtn = f:FindFirstChild("Executar")
-                table.insert(currentData, {Nome = label.Text, Script = scriptBtn and scriptBtn.ScriptConteudo or ""})
-            end
-        end
-        table.insert(currentData, {Nome = nome, Script = scriptConteudo})
-        pcall(function()
-            scriptStore:SetAsync(player.UserId, currentData)
-        end)
-    end
-
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y)
 end
 
--- Carregar scripts salvos do DataStore
-pcall(function()
-    local savedScripts = scriptStore:GetAsync(player.UserId)
-    if savedScripts then
-        for _, s in pairs(savedScripts) do
-            criarItemSalvo(s.Nome, s.Script, false)
+-- 3. CRIAÇÃO DE PEDRA ANGULAR (FORMATO DA IMAGEM)
+local function criarPedraAngular(pos, escalaBase, cor)
+    local modeloPedra = Instance.new("Model", workspace)
+    local numPartes = Rand:NextInteger(3, 5)
+    local forma = Enum.PartType.Block
+    
+    for i = 1, numPartes do
+        local p = Instance.new("Part", modeloPedra)
+        local tam = (escalaBase or Vector3.new(4, 3, 4)) * Rand:NextNumber(0.8, 1.2)
+        p.Size = tam
+        p.Shape = forma
+        p.Position = pos + Vector3.new(Rand:NextNumber(-1,1), Rand:NextNumber(-0.5, 0.5), Rand:NextNumber(-1,1))
+        p.CFrame = p.CFrame * CFrame.Angles(math.rad(Rand:NextNumber(0,360)), math.rad(Rand:NextNumber(0,360)), math.rad(Rand:NextNumber(0,360)))
+        p.Anchored, p.Material, p.Color = true, Enum.Material.Slate, cor or Color3.fromRGB(80, 80, 80)
+    end
+end
+
+-- 4. FOGUEIRA COM CÍRCULO DE PEDRAS ANGULARES
+local function criarFogueiraRealista(codigo)
+    if not ilha or codigo ~= COD_FOGUEIRA then return end
+    local fogModel = Instance.new("Model", workspace)
+    
+    local numPedras = 14
+    local raioFogueira = 6
+    for i = 1, numPedras do
+        local angulo = (i / numPedras) * math.pi * 2
+        local x = math.cos(angulo) * raioFogueira
+        local z = math.sin(angulo) * raioFogueira
+        criarPedraAngular(POSICAO_ILHA + Vector3.new(x, -0.5, z), Vector3.new(2, 1.5, 2), Color3.fromRGB(90, 90, 90))
+    end
+
+    for i = 1, 6 do 
+        local log = Instance.new("Part", fogModel)
+        log.Size = Vector3.new(1, 1, 6)
+        log.CFrame = CFrame.new(POSICAO_ILHA + Vector3.new(0, 1.2, 0)) * CFrame.Angles(0, math.rad(i*60), math.rad(35))
+        log.Anchored, log.Material, log.Color = true, Enum.Material.Wood, Color3.fromRGB(60, 40, 25)
+    end
+    
+    local ef = Instance.new("Part", fogModel)
+    ef.Size, ef.Position, ef.Transparency, ef.Anchored = Vector3.new(1,1,1), POSICAO_ILHA + Vector3.new(0, 2, 0), 1, true
+    Instance.new("Fire", ef).Size = 14
+    _G.somFogo = Instance.new("Sound", ef); _G.somFogo.SoundId = "rbxassetid://144521469"; _G.somFogo.Looped, _G.somFogo.Volume = true, 1
+end
+
+-- 5. ÁRVORES (MANTIDAS)
+local function criarArvore(pos)
+    local m = Instance.new("Model", workspace)
+    local t = Instance.new("Part", m)
+    t.Shape, t.Size = Enum.PartType.Cylinder, Vector3.new(25, 4, 4)
+    t.CFrame = CFrame.new(pos + Vector3.new(0, 12, 0)) * CFrame.Angles(0, 0, math.rad(90))
+    t.Anchored, t.Material, t.Color = true, Enum.Material.Wood, Color3.fromRGB(80, 55, 40)
+    for i = 1, 7 do
+        local f = Instance.new("Part", m)
+        f.Shape, f.Size = Enum.PartType.Ball, Vector3.new(14, 11, 14)
+        f.Position = pos + Vector3.new(Rand:NextNumber(-6,6), 18 + i*2, Rand:NextNumber(-6,6))
+        f.Anchored, f.Material, f.Color = true, Enum.Material.Grass, Color3.fromRGB(34, 78, 34)
+    end
+end
+
+-- 6. SETUP GERAL
+task.spawn(function()
+    if COD_TEMPO == "004" then tempoAtivado = true end
+    if COD_ILHA == "003" then
+        ilha = Instance.new("Part", workspace)
+        ilha.Name, ilha.Size, ilha.Position, ilha.Anchored = "IlhaSecreta", Vector3.new(TAMANHO_ILHA, 2, TAMANHO_ILHA), POSICAO_ILHA, true
+        ilha.Material, ilha.Color = Enum.Material.Grass, Color3.fromRGB(40, 80, 40)
+        
+        for i = 1, 4 do -- Paredes (Agora visíveis e sólidas)
+            local p = Instance.new("Part", workspace)
+            p.Size = (i<3) and Vector3.new(10, 60, 1000) or Vector3.new(1000, 60, 10)
+            p.Position = POSICAO_ILHA + ((i==1 and Vector3.new(500,30,0)) or (i==2 and Vector3.new(-500,30,0)) or (i==3 and Vector3.new(0,30,500)) or Vector3.new(0,30,-500))
+            p.Anchored, p.Transparency, p.Material, p.Color = true, 0.0, Enum.Material.Concrete, Color3.fromRGB(50, 50, 50)
+        end
+
+        criarFogueiraRealista("001")
+        for i = 1, TOTAL_PEDRAS_ILHA do
+            local x, z = Rand:NextNumber(-480, 480), Rand:NextNumber(-480, 480)
+            if Vector2.new(x, z).Magnitude > 80 then 
+                criarPedraAngular(POSICAO_ILHA + Vector3.new(x, 0, z), Vector3.new(Rand:NextNumber(3, 15), Rand:NextNumber(3, 15), Rand:NextNumber(3, 15)))
+            end
+        end
+
+        for i = 1, TOTAL_ARVORES do
+            local x, z = Rand:NextNumber(-480, 480), Rand:NextNumber(-480, 480)
+            if Vector2.new(x, z).Magnitude > 80 then criarArvore(POSICAO_ILHA + Vector3.new(x, 0, z)) end
+            if i % 60 == 0 then task.wait() end
         end
     end
 end)
 
--- Botão + (abrir janela adicionar script)
-addButton.MouseButton1Click:Connect(function()
-    local addGui = Instance.new("Frame")
-    addGui.Size = UDim2.new(0, 350, 0, 250)
-    addGui.Position = UDim2.new(0.5, -175, 0.5, -125)
-    addGui.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    addGui.BorderSizePixel = 2
-    addGui.Parent = screenGui
-    addGui.Active = true
-
-    local smallTitle = Instance.new("TextLabel")
-    smallTitle.Size = UDim2.new(1, -20, 0, 25)
-    smallTitle.Position = UDim2.new(0, 10, 0, 10)
-    smallTitle.BackgroundTransparency = 1
-    smallTitle.Text = "Digite o nome e o script"
-    smallTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    smallTitle.Font = Enum.Font.SourceSans
-    smallTitle.TextSize = 16
-    smallTitle.TextXAlignment = Enum.TextXAlignment.Left
-    smallTitle.Parent = addGui
-
-    local nomeBox = Instance.new("TextBox")
-    nomeBox.Size = UDim2.new(1, -20, 0, 30)
-    nomeBox.Position = UDim2.new(0, 10, 0, 40)
-    nomeBox.PlaceholderText = "Nome"
-    nomeBox.Text = ""
-    nomeBox.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    nomeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nomeBox.ClearTextOnFocus = false
-    nomeBox.Font = Enum.Font.SourceSans
-    nomeBox.TextSize = 18
-    nomeBox.Parent = addGui
-
-    local scriptBox = Instance.new("TextBox")
-    scriptBox.Size = UDim2.new(1, -20, 0, 130)
-    scriptBox.Position = UDim2.new(0, 10, 0, 80)
-    scriptBox.PlaceholderText = "Script"
-    scriptBox.Text = ""
-    scriptBox.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    scriptBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    scriptBox.ClearTextOnFocus = false
-    scriptBox.MultiLine = true
-    scriptBox.Font = Enum.Font.SourceSans
-    scriptBox.TextSize = 16
-    scriptBox.Parent = addGui
-
-    local cancelarButton = Instance.new("TextButton")
-    cancelarButton.Size = UDim2.new(0, 100, 0, 30)
-    cancelarButton.Position = UDim2.new(0, 10, 1, -40)
-    cancelarButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    cancelarButton.Text = "Cancelar"
-    cancelarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    cancelarButton.Font = Enum.Font.SourceSansBold
-    cancelarButton.TextSize = 18
-    cancelarButton.Parent = addGui
-
-    cancelarButton.MouseButton1Click:Connect(function()
-        addGui:Destroy()
-    end)
-
-    local salvarButton = Instance.new("TextButton")
-    salvarButton.Size = UDim2.new(0, 100, 0, 30)
-    salvarButton.Position = UDim2.new(0, 120, 1, -40)
-    salvarButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    salvarButton.Text = "Salvar"
-    salvarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    salvarButton.Font = Enum.Font.SourceSansBold
-    salvarButton.TextSize = 18
-    salvarButton.Parent = addGui
-
-    salvarButton.MouseButton1Click:Connect(function()
-        local nome = nomeBox.Text
-        local scriptConteudo = scriptBox.Text
-        if nome ~= "" and scriptConteudo ~= "" then
-            criarItemSalvo(nome, scriptConteudo, true)
-            addGui:Destroy()
-        else
-            warn("Nome ou script vazio!")
+-- 7. LÓGICA DE TELEPORTE
+RunService.RenderStepped:Connect(function()
+    if tempoAtivado then Lighting.ClockTime, Lighting.Brightness = 14, 3 end
+    local char = Player.Character; local root = char and char:FindFirstChild("HumanoidRootPart")
+    local jBtn = Player.PlayerGui:FindFirstChild("JumpButton", true)
+    if jBtn and root and ilha then
+        if not jBtn.Visible and estado == "normal" then
+            estado = "ilha"; root.CFrame = CFrame.new(POSICAO_ILHA + Vector3.new(0, 8, 0))
+            root.Anchored = true; setInvisibilidade(char, true)
+            if _G.somFogo then _G.somFogo:Play() end
+            BlackFrame.BackgroundTransparency = 0
+            TweenService:Create(BlackFrame, TweenInfo.new(1), {BackgroundTransparency = 1}):Play()
+        elseif jBtn.Visible and estado == "ilha" then
+            estado = "normal"; root.Anchored = false; setInvisibilidade(char, false)
+            if _G.somFogo then _G.somFogo:Stop() end
+            BlackFrame.BackgroundTransparency = 0
+            TweenService:Create(BlackFrame, TweenInfo.new(1), {BackgroundTransparency = 1}):Play()
         end
-    end)
+    end
 end)
