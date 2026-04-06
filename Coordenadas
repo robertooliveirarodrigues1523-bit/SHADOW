@@ -1,0 +1,279 @@
+-- 1. SISTEMA DE SERVIÇOS E ANTI-EXECUÇÃO
+if _G.ShadowPSLoaded then return end
+_G.ShadowPSLoaded = true
+
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Market = game:GetService("MarketplaceService")
+local TweenService = game:GetService("TweenService")
+local player = game.Players.LocalPlayer
+local FILENAME = "ShadowPS_Data.json"
+
+local function saveData(data)
+    if writefile then writefile(FILENAME, HttpService:JSONEncode(data)) end
+end
+
+local function loadData()
+    if isfile and isfile(FILENAME) then
+        return HttpService:JSONDecode(readfile(FILENAME))
+    end
+    return {}
+end
+
+local allWaypoints = loadData()
+local currentGameId = tostring(game.PlaceId)
+local currentGameName = Market:GetProductInfo(game.PlaceId).Name
+local isMinimized = false
+
+-- 2. FUNÇÕES VISUAIS ORIGINAIS
+local function applyRainbow(obj)
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 5 
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.LineJoinMode = Enum.LineJoinMode.Round
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Parent = obj
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 255))
+    }
+    gradient.Parent = stroke
+    task.spawn(function()
+        local angle = 0
+        while true do angle = angle + 4 gradient.Rotation = angle task.wait(0.02) end
+    end)
+end
+
+local function createWaveText(parent, text, size, alignment)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.HorizontalAlignment = alignment
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.Parent = container
+    local letters = {}
+    for i = 1, #text do
+        local char = string.sub(text, i, i)
+        local l = Instance.new("TextLabel")
+        l.Text = char == " " and "  " or char
+        l.Size = UDim2.new(0, 0, 1, 0)
+        l.AutomaticSize = Enum.AutomaticSize.X
+        l.Font = Enum.Font.FredokaOne
+        l.TextSize = size
+        l.TextColor3 = Color3.fromRGB(255, 255, 255)
+        l.BackgroundTransparency = 1
+        l.Visible = false
+        l.Parent = container
+        table.insert(letters, l)
+    end
+    task.spawn(function()
+        while true do
+            for _, l in ipairs(letters) do l.Visible = true task.wait(0.12) end
+            task.wait(2)
+            for i = #letters, 1, -1 do letters[i].Visible = false task.wait(0.08) end
+            task.wait(1)
+        end
+    end)
+    RunService.RenderStepped:Connect(function()
+        for i, l in ipairs(letters) do
+            if l.Visible then
+                l.Position = UDim2.new(0, 0, 0, math.sin((tick() * 5) + (i * 0.8)) * 4)
+            end
+        end
+    end)
+end
+
+-- 3. INTERFACE PRINCIPAL
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ShadowPS_Ultimate_V16"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game:GetService("CoreGui")
+
+local MainBtn = Instance.new("TextButton")
+MainBtn.Size = UDim2.new(0, 110, 0, 35)
+MainBtn.Position = UDim2.new(0.5, -55, 0.05, 0)
+MainBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainBtn.Text = ""
+MainBtn.Parent = ScreenGui
+Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0, 15)
+applyRainbow(MainBtn)
+createWaveText(MainBtn, "SHADOW PS", 12, Enum.HorizontalAlignment.Center)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 250, 0, 350)
+MainFrame.Position = UDim2.new(0, 20, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.Visible = false
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+applyRainbow(MainFrame)
+
+local TitleContainer = Instance.new("Frame")
+TitleContainer.Size = UDim2.new(1, 0, 0, 40)
+TitleContainer.Position = UDim2.new(0, 0, 0, 5)
+TitleContainer.BackgroundTransparency = 1
+TitleContainer.Parent = MainFrame
+createWaveText(TitleContainer, "SHADOW PS", 18, Enum.HorizontalAlignment.Center)
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(1, -30, 0, 8)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255); CloseBtn.Font = Enum.Font.FredokaOne
+CloseBtn.Parent = MainFrame
+
+local MiniBtn = Instance.new("TextButton")
+MiniBtn.Size = UDim2.new(0, 25, 0, 25)
+MiniBtn.Position = UDim2.new(1, -60, 0, 8)
+MiniBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+MiniBtn.Text = "-"; MiniBtn.TextColor3 = Color3.fromRGB(255, 255, 255); MiniBtn.Font = Enum.Font.FredokaOne
+MiniBtn.Parent = MainFrame
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -20, 1, -110)
+Scroll.Position = UDim2.new(0, 10, 0, 60)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+Scroll.ScrollBarThickness = 4
+Scroll.Parent = MainFrame
+Instance.new("UIListLayout", Scroll).Padding = UDim.new(0, 15)
+
+local AddBtn = Instance.new("TextButton")
+AddBtn.Size = UDim2.new(0, 40, 0, 40)
+AddBtn.Position = UDim2.new(1, -50, 1, -50)
+AddBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+AddBtn.Text = "+"; AddBtn.TextColor3 = Color3.fromRGB(255, 255, 255); AddBtn.TextSize = 30; AddBtn.Font = Enum.Font.FredokaOne
+AddBtn.Parent = MainFrame
+Instance.new("UICorner", AddBtn).CornerRadius = UDim.new(1, 0)
+applyRainbow(AddBtn)
+
+-- 4. JANELAS DE NOTIFICAÇÃO
+local function createPopUp(size, pos)
+    local f = Instance.new("Frame")
+    f.Size = size; f.Position = pos; f.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    f.Visible = false; f.Parent = ScreenGui; applyRainbow(f)
+    return f
+end
+
+local DeleteFrame = createPopUp(UDim2.new(0, 320, 0, 300), UDim2.new(0.5, -160, 0.5, -150))
+local DeleteAviso = Instance.new("TextLabel")
+DeleteAviso.Size = UDim2.new(1, -20, 0, 220); DeleteAviso.Position = UDim2.new(0, 10, 0, 10)
+DeleteAviso.TextColor3 = Color3.fromRGB(255, 255, 255); DeleteAviso.TextSize = 15; DeleteAviso.Font = Enum.Font.FredokaOne; DeleteAviso.TextWrapped = true; DeleteAviso.BackgroundTransparency = 1; DeleteAviso.Parent = DeleteFrame
+local OkDel = Instance.new("TextButton")
+OkDel.Text = "OK"; OkDel.BackgroundColor3 = Color3.fromRGB(0, 180, 0); OkDel.Position = UDim2.new(0.6, 0, 0.85, 0); OkDel.Size = UDim2.new(0, 110, 0, 35); OkDel.Parent = DeleteFrame
+local CancelDel = Instance.new("TextButton")
+CancelDel.Text = "CANCELAR"; CancelDel.BackgroundColor3 = Color3.fromRGB(200, 0, 0); CancelDel.Position = UDim2.new(0.1, 0, 0.85, 0); CancelDel.Size = UDim2.new(0, 110, 0, 35); CancelDel.Parent = DeleteFrame
+
+local SaveFrame = createPopUp(UDim2.new(0, 320, 0, 260), UDim2.new(0.5, -160, 0.5, -130))
+local SaveAviso = Instance.new("TextLabel")
+SaveAviso.Size = UDim2.new(1, -20, 0, 140); SaveAviso.Position = UDim2.new(0, 10, 0, 10); SaveAviso.Text = "⚠️ NOTIFICAÇÃO DE SALVAMENTO\n\nDETALHES: O sistema não detectou uma coordenada salva para este jogo específico. Digite um nome abaixo para salvar sua posição atual permanentemente."; SaveAviso.TextColor3 = Color3.fromRGB(255, 255, 255); SaveAviso.TextSize = 14; SaveAviso.Font = Enum.Font.FredokaOne; SaveAviso.TextWrapped = true; SaveAviso.BackgroundTransparency = 1; SaveAviso.Parent = SaveFrame
+local InputBox = Instance.new("TextBox")
+InputBox.Size = UDim2.new(0.8, 0, 0, 35); InputBox.Position = UDim2.new(0.1, 0, 0.58, 0); InputBox.PlaceholderText = "Título..."; InputBox.Parent = SaveFrame
+local OkSave = Instance.new("TextButton")
+OkSave.Text = "OK"; OkSave.BackgroundColor3 = Color3.fromRGB(0, 180, 0); OkSave.Position = UDim2.new(0.1, 0, 0.82, 0); OkSave.Size = UDim2.new(0, 110, 0, 35); OkSave.Parent = SaveFrame
+local CancelSave = Instance.new("TextButton")
+CancelSave.Text = "CANCELAR"; CancelSave.BackgroundColor3 = Color3.fromRGB(200, 0, 0); CancelSave.Position = UDim2.new(0.55, 0, 0.82, 0); CancelSave.Size = UDim2.new(0, 110, 0, 35); CancelSave.Parent = SaveFrame
+
+local UpdateFrame = createPopUp(UDim2.new(0, 320, 0, 260), UDim2.new(0.5, -160, 0.5, -130))
+local UpdateAviso = Instance.new("TextLabel")
+UpdateAviso.Size = UDim2.new(1, -20, 0, 160); UpdateAviso.Position = UDim2.new(0, 10, 0, 10); UpdateAviso.Text = "⚠️ NOTIFICAÇÃO DE ATUALIZAÇÃO\n\nDETALHES: Foi encontrado um registro existente para este jogo. Ao confirmar, o sistema irá sobrescrever os dados antigos pela sua posição atual. Deseja realizar esta modificação?"; UpdateAviso.TextColor3 = Color3.fromRGB(255, 255, 255); UpdateAviso.Font = Enum.Font.FredokaOne; UpdateAviso.TextWrapped = true; UpdateAviso.BackgroundTransparency = 1; UpdateAviso.Parent = UpdateFrame
+local OkUpdate = Instance.new("TextButton")
+OkUpdate.Text = "ATUALIZAR"; OkUpdate.BackgroundColor3 = Color3.fromRGB(0, 180, 0); OkUpdate.Position = UDim2.new(0.55, 0, 0.78, 0); OkUpdate.Size = UDim2.new(0, 110, 0, 35); OkUpdate.Parent = UpdateFrame
+local CancelUpdate = Instance.new("TextButton")
+CancelUpdate.Text = "CANCELAR"; CancelUpdate.BackgroundColor3 = Color3.fromRGB(200, 0, 0); CancelUpdate.Position = UDim2.new(0.1, 0, 0.78, 0); CancelUpdate.Size = UDim2.new(0, 110, 0, 35); CancelUpdate.Parent = UpdateFrame
+
+-- 5. ANIMAÇÕES TWEEN
+local function playTween(state)
+    local targetSize, targetPos
+    if state == "open" then
+        targetSize = UDim2.new(0, 250, 0, 350); targetPos = UDim2.new(0, 20, 0.5, -175); MainFrame.Visible = true; isMinimized = false; AddBtn.Visible = true
+    elseif state == "minimize" then
+        targetSize = UDim2.new(0, 250, 0, 45); targetPos = MainFrame.Position; isMinimized = true; AddBtn.Visible = false
+    elseif state == "close" then
+        targetSize = UDim2.new(0, 250, 0, 0); targetPos = UDim2.new(0, 20, 0.5, 0); isMinimized = false; AddBtn.Visible = false
+    end
+    local tween = TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = targetSize, Position = targetPos})
+    tween:Play()
+    tween.Completed:Connect(function() if state == "close" then MainFrame.Visible = false end end)
+end
+
+-- 6. RENDERIZAÇÃO ESPECÍFICA (FOCO NA EXCLUSÃO INDIVIDUAL)
+local function renderWaypoints()
+    for _, v in pairs(Scroll:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+    local sortedIds = {}
+    for id, _ in pairs(allWaypoints) do table.insert(sortedIds, id) end
+    table.sort(sortedIds, function(a, b) if a == currentGameId then return true end if b == currentGameId then return false end return a < b end)
+    
+    for _, id in ipairs(sortedIds) do
+        -- Variáveis locais para cada barra individualmente
+        local data = allWaypoints[id]
+        local isThisGame = (id == currentGameId)
+        
+        local Bar = Instance.new("Frame")
+        Bar.Size = UDim2.new(0, 230, 0, 90); Bar.BackgroundColor3 = isThisGame and Color3.fromRGB(20, 20, 20) or Color3.fromRGB(35, 35, 35)
+        Bar.Parent = Scroll; Instance.new("UICorner", Bar).CornerRadius = UDim.new(0, 8)
+        
+        local T1 = Instance.new("TextLabel")
+        T1.Size = UDim2.new(0.6, 0, 0, 25); T1.Position = UDim2.new(0, 10, 0, 10); T1.Text = data.Title; T1.TextColor3 = Color3.fromRGB(255, 255, 255); T1.Font = Enum.Font.FredokaOne; T1.TextSize = 18; T1.TextXAlignment = Enum.TextXAlignment.Left; T1.BackgroundTransparency = 1; T1.Parent = Bar
+        
+        local T2 = Instance.new("TextLabel")
+        T2.Size = UDim2.new(0.6, 0, 0, 20); T2.Position = UDim2.new(0, 10, 0, 38); T2.Text = data.GameName or "Unknown"; T2.TextColor3 = Color3.fromRGB(180, 180, 180); T2.Font = Enum.Font.SourceSansItalic; T2.TextSize = 15; T2.TextXAlignment = Enum.TextXAlignment.Left; T2.BackgroundTransparency = 1; T2.Parent = Bar
+        
+        local DEL = Instance.new("TextButton")
+        DEL.Text = "DEL"; DEL.Size = UDim2.new(0, 35, 0, 25); DEL.Position = UDim2.new(1, -40, 0.1, 0); DEL.BackgroundColor3 = Color3.fromRGB(200, 0, 0); DEL.Parent = Bar
+
+        -- EVENTO DE CLICK UNICO PARA ESTA BARRA ESPECIFICA
+        DEL.MouseButton1Click:Connect(function()
+            MainFrame.Visible = false; AddBtn.Visible = false
+            DeleteAviso.Text = "⚠️ NOTIFICAÇÃO DE EXCLUSÃO\n\nDETALHES: Você solicitou a remoção de um registro específico.\n\nTÍTULO: ["..data.Title.."]\nJOGO: ["..(data.GameName or "Desconhecido").."]\n\nEsta ação irá remover apenas este waypoint de forma definitiva. Prosseguir?"
+            DeleteFrame.Visible = true
+            
+            -- Limpar conexões antigas do botão OK global para não deletar itens errados
+            local okConnection; okConnection = OkDel.MouseButton1Click:Connect(function()
+                allWaypoints[id] = nil -- Deleta apenas o ID que capturamos neste loop
+                saveData(allWaypoints)
+                renderWaypoints()
+                DeleteFrame.Visible = false; MainFrame.Visible = true; AddBtn.Visible = true
+                okConnection:Disconnect() -- Desconecta para o próximo click ser independente
+            end)
+            
+            -- Botão Cancelar também precisa limpar a conexão temporária
+            local cancelConnection; cancelConnection = CancelDel.MouseButton1Click:Connect(function()
+                DeleteFrame.Visible = false; MainFrame.Visible = true; AddBtn.Visible = true
+                okConnection:Disconnect() -- Mata a ordem de deletar se cancelar
+                cancelConnection:Disconnect()
+            end)
+        end)
+
+        if isThisGame then
+            local TP = Instance.new("TextButton")
+            TP.Text = "TP"; TP.Size = UDim2.new(0, 35, 0, 25); TP.Position = UDim2.new(1, -80, 0.1, 0); TP.BackgroundColor3 = Color3.fromRGB(0, 180, 0); TP.Parent = Bar
+            TP.MouseButton1Click:Connect(function() player.Character.HumanoidRootPart.CFrame = CFrame.new(data.Pos.x, data.Pos.y, data.Pos.z) end)
+        else
+            local COPY = Instance.new("TextButton")
+            COPY.Text = "COPIAR"; COPY.Size = UDim2.new(0, 60, 0, 25); COPY.Position = UDim2.new(1, -110, 0.1, 0); COPY.BackgroundColor3 = Color3.fromRGB(0, 120, 215); COPY.Parent = Bar
+            COPY.MouseButton1Click:Connect(function() if setclipboard then setclipboard(tostring(data.GameName)) end end)
+        end
+    end
+end
+
+-- 7. EVENTOS
+AddBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; AddBtn.Visible = false; if allWaypoints[currentGameId] then UpdateFrame.Visible = true else SaveFrame.Visible = true end end)
+OkSave.MouseButton1Click:Connect(function() if InputBox.Text ~= "" then local pos = player.Character.HumanoidRootPart.Position; allWaypoints[currentGameId] = {Title = InputBox.Text, GameName = currentGameName, Pos = {x = pos.X, y = pos.Y, z = pos.Z}} saveData(allWaypoints) renderWaypoints() SaveFrame.Visible = false MainFrame.Visible = true; AddBtn.Visible = true end end)
+OkUpdate.MouseButton1Click:Connect(function() local pos = player.Character.HumanoidRootPart.Position; allWaypoints[currentGameId].Pos = {x = pos.X, y = pos.Y, z = pos.Z} saveData(allWaypoints) renderWaypoints() UpdateFrame.Visible = false MainFrame.Visible = true; AddBtn.Visible = true end)
+CancelSave.MouseButton1Click:Connect(function() SaveFrame.Visible = false; MainFrame.Visible = true; AddBtn.Visible = true end)
+CancelUpdate.MouseButton1Click:Connect(function() UpdateFrame.Visible = false; MainFrame.Visible = true; AddBtn.Visible = true end)
+CancelDel.MouseButton1Click:Connect(function() DeleteFrame.Visible = false; MainFrame.Visible = true; AddBtn.Visible = true end)
+
+MiniBtn.MouseButton1Click:Connect(function() if isMinimized then playTween("open") else playTween("minimize") end end)
+CloseBtn.MouseButton1Click:Connect(function() playTween("close") MainBtn.Visible = true end)
+MainBtn.MouseButton1Click:Connect(function() MainBtn.Visible = false playTween("open") renderWaypoints() end)
