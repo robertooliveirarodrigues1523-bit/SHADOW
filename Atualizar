@@ -1,0 +1,165 @@
+-- SISTEMA DE ANTI-MULTIPLICAÇÃO
+if _G.LobbySystemLoaded then return else _G.LobbySystemLoaded = true end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local player = Players.LocalPlayer
+local targetSpeed = 40 
+local gameId = tostring(game.PlaceId)
+local fileName = "LobbyData_" .. gameId .. ".txt"
+
+-- SISTEMA DE SALVAMENTO PERMANENTE
+local function savePos(cf)
+    local data = {pos = {cf.X, cf.Y, cf.Z}, rot = {cf:ToEulerAnglesXYZ()}}
+    writefile(fileName, HttpService:JSONEncode(data))
+end
+
+local function loadPos()
+    if isfile(fileName) then
+        local success, data = pcall(function() return HttpService:JSONDecode(readfile(fileName)) end)
+        if success then return CFrame.new(unpack(data.pos)) * CFrame.fromEulerAnglesXYZ(unpack(data.rot)) end
+    end
+    return nil
+end
+
+local lobbyPosition = loadPos()
+
+-- INTERFACE
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DeltaLobbySystem"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = game:GetService("CoreGui")
+
+-- FUNÇÃO PARA ESTILO (COR ÚNICA ARCO-ÍRIS ANIMADA)
+local function applyStyle(obj)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 15)
+    corner.Parent = obj
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.LineJoinMode = Enum.LineJoinMode.Round
+    stroke.Parent = obj
+
+    return stroke
+end
+
+-- BOTÃO LOBBY (Direita)
+local btnLobby = Instance.new("TextButton")
+btnLobby.Size = UDim2.new(0, 90, 0, 35)
+btnLobby.Position = UDim2.new(1, -330, 1, -50)
+btnLobby.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+btnLobby.Text = "LOBBY"
+btnLobby.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnLobby.TextSize = 18
+btnLobby.Font = Enum.Font.SourceSansBold
+btnLobby.Parent = screenGui
+local strokeLobby = applyStyle(btnLobby)
+
+-- BOTÃO ATUALIZAR (Bem mais para a esquerda para separar)
+local btnOpen = Instance.new("TextButton")
+btnOpen.Size = UDim2.new(0, 110, 0, 35)
+btnOpen.Position = UDim2.new(1, -470, 1, -50) -- Distância aumentada para -470
+btnOpen.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+btnOpen.Text = "ATUALIZAR"
+btnOpen.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnOpen.TextSize = 16
+btnOpen.Font = Enum.Font.SourceSansBold
+btnOpen.Parent = screenGui
+local strokeOpen = applyStyle(btnOpen)
+
+-- PAINEL DE AVISO
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 320, 0, 200)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+local strokeFrame = applyStyle(mainFrame)
+
+local infoTitle = Instance.new("TextLabel")
+infoTitle.Size = UDim2.new(1, 0, 0, 50)
+infoTitle.Text = "⚠️ ATENÇÃO"
+infoTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+infoTitle.TextSize = 22
+infoTitle.Font = Enum.Font.SourceSansBold
+infoTitle.BackgroundTransparency = 1
+infoTitle.Parent = mainFrame
+
+local infoDesc = Instance.new("TextLabel")
+infoDesc.Size = UDim2.new(1, -30, 0, 100)
+infoDesc.Position = UDim2.new(0, 15, 0, 50)
+infoDesc.Text = "Você está prestes a mudar seu ponto de teleporte permanente neste jogo. Deseja salvar sua posição atual?"
+infoDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
+infoDesc.TextSize = 18
+infoDesc.TextWrapped = true
+infoDesc.Font = Enum.Font.SourceSans
+infoDesc.BackgroundTransparency = 1
+infoDesc.Parent = mainFrame
+
+local btnConfirm = Instance.new("TextButton")
+btnConfirm.Size = UDim2.new(0, 120, 0, 40)
+btnConfirm.Position = UDim2.new(0.55, 0, 0.75, 0)
+btnConfirm.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+btnConfirm.Text = "SIM"
+btnConfirm.TextSize = 18
+btnConfirm.Font = Enum.Font.SourceSansBold
+btnConfirm.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnConfirm.Parent = mainFrame
+Instance.new("UICorner", btnConfirm)
+
+local btnCancel = Instance.new("TextButton")
+btnCancel.Size = UDim2.new(0, 120, 0, 40)
+btnCancel.Position = UDim2.new(0.05, 0, 0.75, 0)
+btnCancel.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+btnCancel.Text = "NÃO"
+btnCancel.TextSize = 18
+btnCancel.Font = Enum.Font.SourceSansBold
+btnCancel.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnCancel.Parent = mainFrame
+Instance.new("UICorner", btnCancel)
+
+-- LÓGICA
+btnOpen.MouseButton1Click:Connect(function()
+    mainFrame.Visible = true
+    btnLobby.Visible = false
+    btnOpen.Visible = false
+end)
+
+btnCancel.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    btnLobby.Visible = true
+    btnOpen.Visible = true
+end)
+
+btnConfirm.MouseButton1Click:Connect(function()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        lobbyPosition = player.Character.HumanoidRootPart.CFrame
+        savePos(lobbyPosition)
+        mainFrame.Visible = false
+        btnLobby.Visible = true
+        btnOpen.Visible = true
+    end
+end)
+
+btnLobby.MouseButton1Click:Connect(function()
+    if lobbyPosition and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = lobbyPosition
+    end
+end)
+
+-- ANIMAÇÃO DE COR ÚNICA ARCO-ÍRIS E VELOCIDADE
+RunService.RenderStepped:Connect(function()
+    local hue = tick() % 4 / 4 -- Ciclo de 4 segundos
+    local color = Color3.fromHSV(hue, 1, 1)
+    
+    strokeLobby.Color = color
+    strokeOpen.Color = color
+    strokeFrame.Color = color
+    
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid.WalkSpeed = targetSpeed
+    end
+end)
